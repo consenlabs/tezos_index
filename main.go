@@ -14,3 +14,8 @@ func main() {
 	models.InitDB(dsn)
 
 }
+
+// runServer
+func runServer() {
+
+}

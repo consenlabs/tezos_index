@@ -29,5 +29,5 @@ func InitDB(dsn string) {
 
 // autoCreateTable 自动建表
 func autoCreateTable() {
-	DB.AutoMigrate()
+	DB.AutoMigrate(&Account{})
 }
