@@ -21,7 +21,7 @@ func (id OpID) Value() uint64 {
 }
 
 type Op struct {
-	RowId        OpID                `gorm:"primary_key column:row_id"   json:"row_id"`      // internal: unique row id
+	RowId        OpID                `gorm:"primary_key;column:row_id"   json:"row_id"`      // internal: unique row id
 	Timestamp    time.Time           `gorm:"column:time"      json:"time"`                   // bc: op block time
 	Height       int64               `gorm:"column:height"      json:"height"`               // bc: block height op was mined at
 	Cycle        int64               `gorm:"column:cycle"      json:"cycle"`                 // bc: block cycle (tezos specific)

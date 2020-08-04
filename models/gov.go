@@ -20,7 +20,7 @@ func (id ElectionID) Value() uint64 {
 }
 
 type Election struct {
-	RowId        ElectionID `gorm:"primary_key column:row_id"   json:"row_id"`      // unique id
+	RowId        ElectionID `gorm:"primary_key;column:row_id"   json:"row_id"`      // unique id
 	ProposalId   ProposalID `gorm:"column:proposal_id"      json:"proposal_id"`     // winning proposal id (after first vote)
 	NumPeriods   int        `gorm:"column:num_periods"      json:"num_periods"`     // number of periods processed (so far)
 	NumProposals int        `gorm:"column:num_proposals"      json:"num_proposals"` // number of sumbitted proposals
@@ -53,7 +53,7 @@ func (id ProposalID) Value() uint64 {
 }
 
 type Proposal struct {
-	RowId        ProposalID         `gorm:"primary_key column:row_id"   json:"row_id"`      // unique id
+	RowId        ProposalID         `gorm:"primary_key;column:row_id"   json:"row_id"`      // unique id
 	Hash         chain.ProtocolHash `gorm:"column:hash"      json:"hash"`                   // unique proposal hash
 	Height       int64              `gorm:"column:height"      json:"height"`               // proposal publishing block
 	Time         time.Time          `gorm:"column:time"      json:"time"`                   // proposal publishing time
@@ -77,7 +77,7 @@ func (p *Proposal) SetID(id uint64) {
 // or, when closed, the final result of a voting period. Votes contain the
 // cummulative aggregate state at the current block.
 type Vote struct {
-	RowId            uint64                 `gorm:"primary_key column:row_id" json:"row_id"`                  // unique id
+	RowId            uint64                 `gorm:"primary_key;column:row_id" json:"row_id"`                  // unique id
 	ElectionId       ElectionID             `gorm:"column:election_id"    json:"election_id"`                 // related election id
 	ProposalId       ProposalID             `gorm:"column:proposal_id"    json:"proposal_id"`                 // related proposal id
 	VotingPeriod     int64                  `gorm:"column:voting_period"    json:"voting_period"`             // on-chain sequence number
@@ -121,7 +121,7 @@ func (v *Vote) SetID(id uint64) {
 // operations to vote on up to 20 proposals, periods 2 and 4 use `ballot`
 // operations to vote on progressing with a single winning proposal.
 type Ballot struct {
-	RowId            uint64                 `gorm:"primary_key column:row_id"  json:"row_id"`                // unique id
+	RowId            uint64                 `gorm:"primary_key;column:row_id"  json:"row_id"`                // unique id
 	ElectionId       ElectionID             `gorm:"column:election_id"     json:"election_id"`               // related election id
 	ProposalId       ProposalID             `gorm:"column:proposal_id"     json:"proposal_id"`               // related proposal id
 	VotingPeriod     int64                  `gorm:"column:voting_period"     json:"voting_period"`           // on-chain sequence number

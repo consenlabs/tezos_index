@@ -31,7 +31,7 @@ func init() {
 // contains raw data and translations for related types such as operations, chain totals
 // rights, etc. that is used by indexers
 type Block struct {
-	RowId               uint64                 `gorm:"primary_key column:row_id"   json:"row_id"`                                      // internal: id, not height!
+	RowId               uint64                 `gorm:"primary_key;column:row_id"   json:"row_id"`                                      // internal: id, not height!
 	ParentId            uint64                 `gorm:"column:parent_id"      json:"parent_id"`                                         // internal: parent block id
 	Hash                chain.BlockHash        `gorm:"column:hash"             json:"hash"`                                            // bc: block hash
 	IsOrphan            bool                   `gorm:"column:is_orphan"      json:"is_orphan,omitempty"`                               // internal: valid or orphan state

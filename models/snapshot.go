@@ -14,7 +14,7 @@ var snapshotPool = &sync.Pool{
 
 // Snapshot is an account balance snapshot made at a snapshot block.
 type Snapshot struct {
-	RowId        uint64    `gorm:"primary_key column:row_id" json:"row_id"`
+	RowId        uint64    `gorm:"primary_key;column:row_id" json:"row_id"`
 	Height       int64     `gorm:"column:height"    json:"height"`
 	Cycle        int64     `gorm:"column:cycle"    json:"cycle"`
 	IsSelected   bool      `gorm:"column:is_selected"    json:"is_selected"`

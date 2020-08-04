@@ -33,7 +33,7 @@ func (id AccountID) Value() uint64 {
 
 // Account is an up-to-date snapshot of the current status. For history look at Flow (balance updates).
 type Account struct {
-	RowId              AccountID         `gorm:"primary_key column:row_id" json:"row_id"`
+	RowId              AccountID         `gorm:"primary_key;column:row_id" json:"row_id"`
 	Hash               []byte            `gorm:"column:hash"  json:"hash"`
 	DelegateId         AccountID         `gorm:"column:delegate_id"   json:"delegate_id"`
 	ManagerId          AccountID         `gorm:"column:manager_id"  json:"manager_id"`

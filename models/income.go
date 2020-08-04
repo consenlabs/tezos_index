@@ -15,7 +15,7 @@ var incomePool = &sync.Pool{
 
 // Income is a per-cycle income sheet for baker accounts.
 type Income struct {
-	RowId                  uint64    `gorm:"primary_key column:row_id" json:"row_id"`
+	RowId                  uint64    `gorm:"primary_key;column:row_id" json:"row_id"`
 	Cycle                  int64     `gorm:"column:cycle"    json:"cycle"` // this income cycle (=snapshot+7)
 	AccountId              AccountID `gorm:"column:account_id"    json:"account_id"`
 	Rolls                  int64     `gorm:"column:rolls"    json:"rolls"`                 // at snapshot block

@@ -16,7 +16,7 @@ var contractPool = &sync.Pool{
 
 // Contract holds code and info about smart contracts on the Tezos blockchain.
 type Contract struct {
-	RowId         uint64    `gorm:"primary_key column:row_id"   json:"row_id"`
+	RowId         uint64    `gorm:"primary_key;column:row_id"   json:"row_id"`
 	Hash          []byte    `gorm:"column:hash"       json:"hash"`
 	AccountId     AccountID `gorm:"column:account_id"      json:"account_id"`
 	ManagerId     AccountID `gorm:"column:manager_id"      json:"manager_id"`

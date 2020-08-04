@@ -15,7 +15,7 @@ var bigmapPool = &sync.Pool{
 }
 
 type BigMapItem struct {
-	RowId       uint64                     `gorm:"primary_key column:row_id"   json:"row_id"`    // internal: id
+	RowId       uint64                     `gorm:"primary_key;column:row_id"   json:"row_id"`    // internal: id
 	PrevId      uint64                     `gorm:"column:prev_id"      json:"prev_id"`           // row_id of previous value that's updated
 	AccountId   AccountID                  `gorm:"column:account_id"      json:"account_id"`     // account table entry for contract
 	ContractId  uint64                     `gorm:"column:contract_id"      json:"contract_id"`   // contract table entry

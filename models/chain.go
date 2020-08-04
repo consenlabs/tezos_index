@@ -8,7 +8,7 @@ import (
 )
 
 type Chain struct {
-	RowId              uint64    `gorm:"primary_key column:row_id"   json:"row_id"`                                                // unique id
+	RowId              uint64    `gorm:"primary_key;column:row_id"   json:"row_id"`                                                // unique id
 	Height             int64     `gorm:"column:height"      json:"height"`                                                         // bc: block height (also for orphans)
 	Cycle              int64     `gorm:"column:cycle"      json:"cycle"`                                                           // bc: block cycle (tezos specific)
 	Timestamp          time.Time `gorm:"column:time"      json:"time"`                                                             // bc: block creation time
