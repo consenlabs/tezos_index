@@ -43,7 +43,7 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 
 		// clear temp bigmaps after a batch of internal ops has been processed
 		if !op.IsInternal && needClear {
-			err := idx.DB().Where("bigmap_id < ?", int64(0)).Delete(models.BigMapItem{}).Error
+			err := idx.DB().Where("bigmap_id < ?", int64(0)).Delete(&models.BigMapItem{}).Error
 			if err != nil {
 				return fmt.Errorf("clearing temp bigmaps for op [%d:%d] failed: %v", op.OpN, op.OpC, err)
 			}
@@ -270,7 +270,7 @@ func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64) error {
 
 	// now delete the original items
 	if len(del) > 0 {
-		return idx.DB().Where("row_id in (?)", del).Delete(models.BigMapItem{}).Error
+		return idx.DB().Where("row_id in (?)", del).Delete(&models.BigMapItem{}).Error
 	}
 	return nil
 }

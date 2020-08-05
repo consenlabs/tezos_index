@@ -103,6 +103,6 @@ func (idx *ContractIndex) DisconnectBlock(ctx context.Context, block *models.Blo
 
 func (idx *ContractIndex) DeleteBlock(ctx context.Context, height int64) error {
 	log.Debugf("Rollback deleting contracts at height %d", height)
-	err := idx.DB().Where("height = ?", height).Delete(models.Contract{}).Error
+	err := idx.DB().Where("height = ?", height).Delete(&models.Contract{}).Error
 	return err
 }

@@ -66,5 +66,5 @@ func (idx *BlockIndex) DisconnectBlock(ctx context.Context, block *models.Block,
 
 func (idx *BlockIndex) DeleteBlock(ctx context.Context, height int64) error {
 	log.Debugf("Rollback deleting block at height %d", height)
-	return idx.DB().Where("height = ?", height).Delete(models.Block{}).Error
+	return idx.DB().Where("height = ?", height).Delete(&models.Block{}).Error
 }
