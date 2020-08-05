@@ -44,7 +44,7 @@ type Account struct {
 	FirstOut           int64             `gorm:"column:first_out"   json:"first_out"`
 	LastIn             int64             `gorm:"column:last_in" json:"last_in"`
 	LastOut            int64             `gorm:"column:last_out"  json:"last_out"`
-	FirstSeen          int64             `gorm:"column:first_seen"   json:"first_seen"`
+	FirstSeen          int64             `gorm:"column:first_seen"   json:"first_seen"` // genesis account block height
 	LastSeen           int64             `gorm:"column:last_seen"   json:"last_seen"`
 	DelegatedSince     int64             `gorm:"column:delegated_since"  json:"delegated_since"`
 	DelegateSince      int64             `gorm:"column:delegate_since"   json:"delegate_since"`
