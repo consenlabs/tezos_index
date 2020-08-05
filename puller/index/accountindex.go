@@ -1,5 +1,4 @@
 // Copyright (c) 2020 Blockwatch Data Inc.
-// Author: alex@blockwatch.cc
 
 package index
 
@@ -76,7 +75,7 @@ func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Bloc
 		// remove duplicates and sort; returns new slice
 		del = utils.UniqueUint64Slice(del)
 		log.Debugf("Rollback removing accounts %#v", del)
-		if err := idx.DB().Where("row_id in (?)", del).Delete(models.Account{}).Error; err != nil {
+		if err := idx.DB().Where("row_id in (?)", del).Delete(&models.Account{}).Error; err != nil {
 			log.Errorf("batch delete account error: %v", err)
 			return err
 		}
@@ -99,6 +98,6 @@ func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Bloc
 // DeleteBlock
 func (idx *AccountIndex) DeleteBlock(ctx context.Context, height int64) error {
 	log.Debugf("Rollback deleting accounts at height %d", height)
-	err := idx.DB().Where("first_seen = ?", height).Delete(models.Account{}).Error
+	err := idx.DB().Where("first_seen = ?", height).Delete(&models.Account{}).Error
 	return err
 }

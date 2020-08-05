@@ -1,9 +1,10 @@
-package models
+package index
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
+	"tezos_index/puller/models"
 )
 
 var DB *gorm.DB
@@ -29,8 +30,8 @@ func InitDB(dsn string) {
 
 // autoCreateTable 自动建表
 func autoCreateTable() {
-	DB.AutoMigrate(&Account{}, &Block{}, &Chain{}, &Flow{},
-		&Contract{}, &Op{}, &Supply{}, &BigMapItem{}, &Election{},
-		&Proposal{}, &Vote{}, &Ballot{}, &Income{}, &Right{},
-		&Snapshot{})
+	DB.AutoMigrate(&models.Account{}, &models.Block{}, &models.Chain{}, &models.Flow{},
+		&models.Contract{}, &models.Op{}, &models.Supply{}, &models.BigMapItem{}, &models.Election{},
+		&models.Proposal{}, &models.Vote{}, &models.Ballot{}, &models.Income{}, &models.Right{},
+		&models.Snapshot{})
 }

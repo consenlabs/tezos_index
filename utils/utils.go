@@ -1,5 +1,7 @@
 package utils
 
+import "sort"
+
 func Max64(x, y int64) int64 {
 	if x < y {
 		return y
@@ -51,4 +53,34 @@ func Max(x, y int) int {
 	} else {
 		return x
 	}
+}
+
+type Uint64Sorter []uint64
+
+func (s Uint64Sorter) Sort() {
+	if !sort.IsSorted(s) {
+		sort.Sort(s)
+	}
+}
+
+func (s Uint64Sorter) Len() int           { return len(s) }
+func (s Uint64Sorter) Less(i, j int) bool { return s[i] < s[j] }
+func (s Uint64Sorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+func UniqueUint64Slice(a []uint64) []uint64 {
+	if len(a) == 0 {
+		return a
+	}
+	b := make([]uint64, len(a))
+	copy(b, a)
+	Uint64Sorter(b).Sort()
+	j := 0
+	for i := 1; i < len(b); i++ {
+		if b[j] == b[i] {
+			continue
+		}
+		j++
+		b[j] = b[i]
+	}
+	return b[:j+1]
 }
