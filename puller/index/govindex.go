@@ -522,9 +522,15 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 	for _, v := range proposalMap {
 		insProposals = append(insProposals, v)
 	}
-	if err := idx.DB().Model(&models.Proposal{}).Updates(insProposals).Error; err != nil {
-		return err
+	//  todo batch update
+	tx := idx.DB().Begin()
+	for _, v := range insProposals {
+		if err := tx.Model(&models.Proposal{}).Updates(v).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
+	tx.Commit()
 
 	return idx.DB().Create(insBallots).Error
 }
