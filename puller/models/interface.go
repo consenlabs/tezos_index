@@ -5,6 +5,7 @@ package models
 
 import (
 	"context"
+	"github.com/jinzhu/gorm"
 	"tezos_index/chain"
 )
 
@@ -56,20 +57,6 @@ type BlockBuilder interface {
 // BlockIndexer provides a generic interface for an indexer that is managed by an
 // etl.Indexer.
 type BlockIndexer interface {
-	// Name returns the human-readable name of the index.
-	Name() string
-
-	// Key returns the key of the index as a string.
-	Key() string
-
-	// Create is invoked when the indexer manager determines the index needs
-	// to be created for the first time.
-	Create(path, label string, opts interface{}) error
-
-	// Init is invoked when the table manager is first initializing the
-	// datastore.  This differs from the Create method in that it is called on
-	// every load, including the case the datatable was just created.
-	Init(path, label string, opts interface{}) error
 
 	// ConnectBlock is invoked when the table manager is notified that a new
 	// block has been connected to the main chain.
@@ -83,6 +70,6 @@ type BlockIndexer interface {
 	// block must be rolled back after an error occured.
 	DeleteBlock(ctx context.Context, height int64) error
 
-	// Close closes the indexer and frees all associated resources, if any.
-	Close() error
+	// returns the database storing all indexer tables
+	DB() *gorm.DB
 }
