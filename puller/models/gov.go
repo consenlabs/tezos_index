@@ -53,16 +53,16 @@ func (id ProposalID) Value() uint64 {
 }
 
 type Proposal struct {
-	RowId        ProposalID         `gorm:"primary_key;column:row_id"   json:"row_id"`      // unique id
-	Hash         chain.ProtocolHash `gorm:"column:hash"      json:"hash"`                   // unique proposal hash
-	Height       int64              `gorm:"column:height"      json:"height"`               // proposal publishing block
-	Time         time.Time          `gorm:"column:time"      json:"time"`                   // proposal publishing time
-	SourceId     AccountID          `gorm:"column:source_id"      json:"source_id"`         // proposal publisher
-	OpId         OpID               `gorm:"column:op_id"      json:"op_id"`                 // operation publishing this proposal
-	ElectionId   ElectionID         `gorm:"column:election_id"      json:"election_id"`     // custom: election sequence number (same for all voting periods)
-	VotingPeriod int64              `gorm:"column:voting_period"      json:"voting_period"` // protocol: proposal period sequence number
-	Rolls        int64              `gorm:"column:rolls"      json:"rolls"`                 // number of rolls accumulated by this proposal
-	Voters       int64              `gorm:"column:voters"      json:"voters"`               // number of voters who voted for this proposal
+	RowId        ProposalID     `gorm:"primary_key;column:row_id"   json:"row_id"`      // unique id
+	Hash         chain.StrPHash `gorm:"column:hash"      json:"hash"`                   // unique proposal hash
+	Height       int64          `gorm:"column:height"      json:"height"`               // proposal publishing block
+	Time         time.Time      `gorm:"column:time"      json:"time"`                   // proposal publishing time
+	SourceId     AccountID      `gorm:"column:source_id"      json:"source_id"`         // proposal publisher
+	OpId         OpID           `gorm:"column:op_id"      json:"op_id"`                 // operation publishing this proposal
+	ElectionId   ElectionID     `gorm:"column:election_id"      json:"election_id"`     // custom: election sequence number (same for all voting periods)
+	VotingPeriod int64          `gorm:"column:voting_period"      json:"voting_period"` // protocol: proposal period sequence number
+	Rolls        int64          `gorm:"column:rolls"      json:"rolls"`                 // number of rolls accumulated by this proposal
+	Voters       int64          `gorm:"column:voters"      json:"voters"`               // number of voters who voted for this proposal
 }
 
 func (p *Proposal) ID() uint64 {

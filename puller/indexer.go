@@ -149,7 +149,8 @@ func (m *Indexer) ConnectBlock(ctx context.Context, block *Block, builder BlockB
 		}
 
 		// Update the current tip.
-		cloned := block.Hash.Clone()
+		cHash, _ := chain.ParseBlockHash(block.Hash.String())
+		cloned := cHash.Clone()
 		tip.Hash = &cloned
 		tip.Height = block.Height
 	}
@@ -164,7 +165,7 @@ func (m *Indexer) DisconnectBlock(ctx context.Context, block *Block, builder Blo
 			log.Errorf("missing tip for table %s", string(key))
 			continue
 		}
-		if block.Height > 0 && !tip.Hash.IsEqual(block.Hash) {
+		if block.Height > 0 && (tip.Hash.String() != block.Hash.String()) {
 			continue
 		}
 

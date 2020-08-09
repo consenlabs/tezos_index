@@ -21,45 +21,45 @@ func (id OpID) Value() uint64 {
 }
 
 type Op struct {
-	RowId        OpID                `gorm:"primary_key;column:row_id"   json:"row_id"`      // internal: unique row id
-	Timestamp    time.Time           `gorm:"column:time"      json:"time"`                   // bc: op block time
-	Height       int64               `gorm:"column:height"      json:"height"`               // bc: block height op was mined at
-	Cycle        int64               `gorm:"column:cycle"      json:"cycle"`                 // bc: block cycle (tezos specific)
-	Hash         chain.OperationHash `gorm:"column:hash"             json:"hash"`            // bc: unique op_id (op hash)
-	Counter      int64               `gorm:"column:counter"     json:"counter"`              // bc: counter
-	OpN          int                 `gorm:"column:op_n"      json:"op_n"`                   // bc: position in block (block.Operations.([][]*OperationHeader) list position)
-	OpC          int                 `gorm:"column:op_c"      json:"op_c"`                   // bc: position in OperationHeader.Contents.([]Operation) list
-	OpI          int                 `gorm:"column:op_i"      json:"op_i"`                   // bc: position in internal operation result list
-	Type         chain.OpType        `gorm:"column:type"      json:"type"`                   // stats: operation type as defined byprotocol
-	Status       chain.OpStatus      `gorm:"column:status"      json:"status"`               // stats: operation status
-	IsSuccess    bool                `gorm:"column:is_success"      json:"is_success"`       // bc: operation succesful flag
-	IsContract   bool                `gorm:"column:is_contract"     json:"is_contract"`      // bc: operation succesful flag
-	GasLimit     int64               `gorm:"column:gas_limit"      json:"gas_limit"`         // stats: gas limit
-	GasUsed      int64               `gorm:"column:gas_used"      json:"gas_used"`           // stats: gas used
-	GasPrice     float64             `gorm:"column:gas_price"      json:"gas_price"`         // stats: gas price in tezos per unit gas, relative to tx fee
-	StorageLimit int64               `gorm:"column:storage_limit"      json:"storage_limit"` // stats: storage size limit
-	StorageSize  int64               `gorm:"column:storage_size"      json:"storage_size"`   // stats: storage size used/allocated by this op
-	StoragePaid  int64               `gorm:"column:storage_paid"      json:"storage_paid"`   // stats: extra storage size paid by this op
-	Volume       int64               `gorm:"column:volume"      json:"volume"`               // stats: sum of transacted tezos volume
-	Fee          int64               `gorm:"column:fee"      json:"fee"`                     // stats: transaction fees
-	Reward       int64               `gorm:"column:reward"      json:"reward"`               // stats: baking and endorsement rewards
-	Deposit      int64               `gorm:"column:deposit"      json:"deposit"`             // stats: bonded deposits for baking and endorsement
-	Burned       int64               `gorm:"column:burned"      json:"burned"`               // stats: burned tezos
-	SenderId     AccountID           `gorm:"column:sender_id"      json:"sender_id"`         // internal: op sender
-	ReceiverId   AccountID           `gorm:"column:receiver_id"      json:"receiver_id"`     // internal: op receiver
-	ManagerId    AccountID           `gorm:"column:manager_id"      json:"manager_id"`       // internal: op manager for originations
-	DelegateId   AccountID           `gorm:"column:delegate_id"      json:"delegate_id"`     // internal: op delegate for originations and delegations
-	IsInternal   bool                `gorm:"column:is_internal"      json:"is_internal"`     // bc: internal chain/funds management
-	HasData      bool                `gorm:"column:has_data"      json:"has_data"`           // internal: flag to signal if data is available
-	Data         string              `gorm:"column:data"      json:"data"`                   // bc: extra op data
-	Parameters   []byte              `gorm:"column:parameters"      json:"parameters"`       // bc: input params
-	Storage      []byte              `gorm:"column:storage"      json:"storage"`             // bc: result storage
-	BigMapDiff   []byte              `gorm:"column:big_map_diff"      json:"big_map_diff"`   // bc: result big map diff
-	Errors       string              `gorm:"column:errors"      json:"errors"`               // bc: result errors
-	TDD          float64             `gorm:"column:days_destroyed"  json:"days_destroyed"`   // stats: token days destroyed
-	BranchId     uint64              `gorm:"column:branch_id"      json:"branch_id"`         // bc: branch block the op is based on
-	BranchHeight int64               `gorm:"column:branch_height"      json:"branch_height"` // bc: height of the branch block
-	BranchDepth  int64               `gorm:"column:branch_depth"      json:"branch_depth"`   // stats: diff between branch block and current block
+	RowId        OpID            `gorm:"primary_key;column:row_id"   json:"row_id"`      // internal: unique row id
+	Timestamp    time.Time       `gorm:"column:time"      json:"time"`                   // bc: op block time
+	Height       int64           `gorm:"column:height"      json:"height"`               // bc: block height op was mined at
+	Cycle        int64           `gorm:"column:cycle"      json:"cycle"`                 // bc: block cycle (tezos specific)
+	Hash         chain.StrOpHash `gorm:"column:hash"             json:"hash"`            // bc: unique op_id (op hash)
+	Counter      int64           `gorm:"column:counter"     json:"counter"`              // bc: counter
+	OpN          int             `gorm:"column:op_n"      json:"op_n"`                   // bc: position in block (block.Operations.([][]*OperationHeader) list position)
+	OpC          int             `gorm:"column:op_c"      json:"op_c"`                   // bc: position in OperationHeader.Contents.([]Operation) list
+	OpI          int             `gorm:"column:op_i"      json:"op_i"`                   // bc: position in internal operation result list
+	Type         chain.OpType    `gorm:"column:type"      json:"type"`                   // stats: operation type as defined byprotocol
+	Status       chain.OpStatus  `gorm:"column:status"      json:"status"`               // stats: operation status
+	IsSuccess    bool            `gorm:"column:is_success"      json:"is_success"`       // bc: operation succesful flag
+	IsContract   bool            `gorm:"column:is_contract"     json:"is_contract"`      // bc: operation succesful flag
+	GasLimit     int64           `gorm:"column:gas_limit"      json:"gas_limit"`         // stats: gas limit
+	GasUsed      int64           `gorm:"column:gas_used"      json:"gas_used"`           // stats: gas used
+	GasPrice     float64         `gorm:"column:gas_price"      json:"gas_price"`         // stats: gas price in tezos per unit gas, relative to tx fee
+	StorageLimit int64           `gorm:"column:storage_limit"      json:"storage_limit"` // stats: storage size limit
+	StorageSize  int64           `gorm:"column:storage_size"      json:"storage_size"`   // stats: storage size used/allocated by this op
+	StoragePaid  int64           `gorm:"column:storage_paid"      json:"storage_paid"`   // stats: extra storage size paid by this op
+	Volume       int64           `gorm:"column:volume"      json:"volume"`               // stats: sum of transacted tezos volume
+	Fee          int64           `gorm:"column:fee"      json:"fee"`                     // stats: transaction fees
+	Reward       int64           `gorm:"column:reward"      json:"reward"`               // stats: baking and endorsement rewards
+	Deposit      int64           `gorm:"column:deposit"      json:"deposit"`             // stats: bonded deposits for baking and endorsement
+	Burned       int64           `gorm:"column:burned"      json:"burned"`               // stats: burned tezos
+	SenderId     AccountID       `gorm:"column:sender_id"      json:"sender_id"`         // internal: op sender
+	ReceiverId   AccountID       `gorm:"column:receiver_id"      json:"receiver_id"`     // internal: op receiver
+	ManagerId    AccountID       `gorm:"column:manager_id"      json:"manager_id"`       // internal: op manager for originations
+	DelegateId   AccountID       `gorm:"column:delegate_id"      json:"delegate_id"`     // internal: op delegate for originations and delegations
+	IsInternal   bool            `gorm:"column:is_internal"      json:"is_internal"`     // bc: internal chain/funds management
+	HasData      bool            `gorm:"column:has_data"      json:"has_data"`           // internal: flag to signal if data is available
+	Data         string          `gorm:"column:data"      json:"data"`                   // bc: extra op data
+	Parameters   []byte          `gorm:"column:parameters"      json:"parameters"`       // bc: input params
+	Storage      []byte          `gorm:"column:storage"      json:"storage"`             // bc: result storage
+	BigMapDiff   []byte          `gorm:"column:big_map_diff"      json:"big_map_diff"`   // bc: result big map diff
+	Errors       string          `gorm:"column:errors"      json:"errors"`               // bc: result errors
+	TDD          float64         `gorm:"column:days_destroyed"  json:"days_destroyed"`   // stats: token days destroyed
+	BranchId     uint64          `gorm:"column:branch_id"      json:"branch_id"`         // bc: branch block the op is based on
+	BranchHeight int64           `gorm:"column:branch_height"      json:"branch_height"` // bc: height of the branch block
+	BranchDepth  int64           `gorm:"column:branch_depth"      json:"branch_depth"`   // stats: diff between branch block and current block
 }
 
 func AllocOp() *Op {
@@ -72,7 +72,7 @@ func NewOp(block, branch *Block, head *rpc.OperationHeader, op_n, op_c, op_i int
 	o.Timestamp = block.Timestamp
 	o.Height = block.Height
 	o.Cycle = block.Cycle
-	o.Hash = head.Hash
+	o.Hash = chain.StrOpHash(head.Hash.String())
 	o.OpN = op_n
 	o.OpC = op_c
 	o.OpI = op_i
@@ -104,7 +104,7 @@ func (o *Op) Reset() {
 	o.Timestamp = time.Time{}
 	o.Height = 0
 	o.Cycle = 0
-	o.Hash = chain.OperationHash{chain.ZeroHash}
+	o.Hash = chain.StrOpHash(chain.ZeroHash.String())
 	o.OpN = 0
 	o.OpC = 0
 	o.OpI = 0

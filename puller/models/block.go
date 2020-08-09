@@ -33,7 +33,7 @@ func init() {
 type Block struct {
 	RowId               uint64                 `gorm:"primary_key;column:row_id"   json:"row_id"`                                      // internal: id, not height!
 	ParentId            uint64                 `gorm:"column:parent_id"      json:"parent_id"`                                         // internal: parent block id
-	Hash                chain.BlockHash        `gorm:"column:hash"             json:"hash"`                                            // bc: block hash
+	Hash                chain.StrBHash         `gorm:"column:hash"             json:"hash"`                                            // bc: block hash
 	IsOrphan            bool                   `gorm:"column:is_orphan"      json:"is_orphan,omitempty"`                               // internal: valid or orphan state
 	Height              int64                  `gorm:"column:height"      json:"height"`                                               // bc: block height (also for orphans)
 	Cycle               int64                  `gorm:"column:cycle"      json:"cycle"`                                                 // bc: block cycle (tezos specific)
@@ -129,7 +129,7 @@ func NewBlock(tz *Bundle, parent *Block) (*Block, error) {
 	b.Height = tz.Block.Header.Level
 	b.Cycle = tz.Block.Metadata.Level.Cycle
 	b.Timestamp = tz.Block.Header.Timestamp
-	b.Hash = tz.Block.Hash
+	b.Hash = chain.StrBHash(tz.Block.Hash.String())
 	b.Version = tz.Block.Header.Proto
 	b.Validation = tz.Block.Header.ValidationPass
 	b.Priority = tz.Block.Header.Priority
@@ -174,7 +174,8 @@ func NewBlock(tz *Bundle, parent *Block) (*Block, error) {
 }
 
 func (b *Block) FetchRPC(ctx context.Context, c *rpc.Client) error {
-	if !b.Hash.IsValid() {
+	bHash, _ := chain.ParseBlockHash(b.Hash.String())
+	if !bHash.IsValid() {
 		return fmt.Errorf("invalid block hash on block id %d", b.RowId)
 	}
 	var err error
@@ -182,7 +183,7 @@ func (b *Block) FetchRPC(ctx context.Context, c *rpc.Client) error {
 		b.TZ = &Bundle{}
 	}
 	if b.TZ.Block == nil {
-		b.TZ.Block, err = c.GetBlock(ctx, b.Hash)
+		b.TZ.Block, err = c.GetBlock(ctx, bHash)
 		if err != nil {
 			return err
 		}
@@ -309,7 +310,7 @@ func (b *Block) Free() {
 func (b *Block) Reset() {
 	b.RowId = 0
 	b.ParentId = 0
-	b.Hash = chain.BlockHash{chain.ZeroHash}
+	b.Hash = chain.StrBHash(chain.ZeroHash.String())
 	b.IsOrphan = false
 	b.Height = 0
 	b.Cycle = 0

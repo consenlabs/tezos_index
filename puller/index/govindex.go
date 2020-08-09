@@ -386,7 +386,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 				continue
 			}
 			prop := &models.Proposal{
-				Hash:         v,
+				Hash:         chain.StrPHash(v.String()),
 				Height:       block.Height,
 				Time:         block.Timestamp,
 				SourceId:     acc.RowId,

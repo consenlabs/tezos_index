@@ -286,7 +286,8 @@ func (m *Indexer) BlockHashByHeight(ctx context.Context, height int64) (chain.Bl
 	if err != nil {
 		return chain.BlockHash{}, err
 	}
-	return b.Hash, nil
+
+	return chain.ParseBlockHash(b.Hash.String())
 }
 
 func (m *Indexer) BlockHashById(ctx context.Context, id uint64) (chain.BlockHash, error) {
@@ -295,10 +296,14 @@ func (m *Indexer) BlockHashById(ctx context.Context, id uint64) (chain.BlockHash
 	if err != nil {
 		return chain.BlockHash{}, err
 	}
-	if !b.Hash.IsValid() {
-		return b.Hash, index.ErrNoBlockEntry
+	hash, err := chain.ParseBlockHash(b.Hash.String())
+	if err != nil {
+		return chain.BlockHash{}, err
 	}
-	return b.Hash, nil
+	if !hash.IsValid() {
+		return hash, index.ErrNoBlockEntry
+	}
+	return hash, nil
 }
 
 func (m *Indexer) BlockByHeight(ctx context.Context, height int64) (*models.Block, error) {
@@ -1282,20 +1287,20 @@ func (m *Indexer) ListAllDelegates(ctx context.Context) ([]*models.Account, erro
 // 	return ids, nil
 // }
 
-// func (m *Indexer) Flush(ctx context.Context) error {
-// 	for _, idx := range m.indexes {
-// 		for _, t := range idx.Tables() {
-// 			log.Debugf("Flushing %s.", t.Name())
-// 			if err := t.Flush(ctx); err != nil {
-// 				return err
-// 			}
-// 		}
-// 		if err := m.storeTip(idx.Key()); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
+func (m *Indexer) Flush(ctx context.Context) error {
+	for _, idx := range m.indexes {
+		// for _, t := range idx.Tables() {
+		// 	log.Debugf("Flushing %s.", t.Name())
+		// 	if err := t.Flush(ctx); err != nil {
+		// 		return err
+		// 	}
+		// }
+		if err := m.storeTip(idx.Key()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (m *Indexer) FlushJournals(ctx context.Context) error {
 	for _, idx := range m.indexes {

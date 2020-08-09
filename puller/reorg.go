@@ -7,6 +7,7 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"tezos_index/chain"
 	util "tezos_index/utils"
 
 	. "tezos_index/puller/models"
@@ -134,11 +135,12 @@ func (c *Crawler) reorganize(ctx context.Context, formerBest, newBest *Block, ig
 			}
 
 			// rollback chain state to parent block
+			bHash, _ := chain.ParseBlockHash(parent.Hash.String())
 			newTip := &ChainTip{
 				Name:          tip.Name,
 				Symbol:        tip.Symbol,
 				ChainId:       tip.ChainId,
-				BestHash:      parent.Hash,
+				BestHash:      bHash,
 				BestId:        parent.RowId,
 				BestHeight:    parent.Height,
 				BestTime:      parent.Timestamp,
@@ -148,7 +150,7 @@ func (c *Crawler) reorganize(ctx context.Context, formerBest, newBest *Block, ig
 				Deployments:   tip.Deployments,
 			}
 
-			if err := dbStoreChainTip(c.db, newTip); err != nil {
+			if err := dbStoreChainTip(c.indexer.cachedb, newTip); err != nil {
 				return fmt.Errorf("REORGANIZE: updating block database failed for %d: %v", block.Height, err)
 			}
 
@@ -210,12 +212,13 @@ func (c *Crawler) reorganize(ctx context.Context, formerBest, newBest *Block, ig
 			return err
 		}
 
+		bHash, _ := chain.ParseBlockHash(block.Hash.String())
 		// foreward chain tip
 		newTip := &ChainTip{
 			Name:          tip.Name,
 			Symbol:        tip.Symbol,
 			ChainId:       tip.ChainId,
-			BestHash:      block.Hash,
+			BestHash:      bHash,
 			BestId:        block.RowId,
 			BestHeight:    block.Height,
 			BestTime:      block.Timestamp,
@@ -239,7 +242,7 @@ func (c *Crawler) reorganize(ctx context.Context, formerBest, newBest *Block, ig
 			newTip.AddDeployment(block.Params)
 		}
 
-		if err := dbStoreChainTip(c.db, newTip); err != nil {
+		if err := dbStoreChainTip(c.indexer.cachedb, newTip); err != nil {
 			return fmt.Errorf("REORGANIZE: updating block database failed for %d: %v", block.Height, err)
 		}
 
@@ -293,11 +296,13 @@ func (c *Crawler) getReorganizeBlocks(ctx context.Context, tip *Block, best *Blo
 
 	log.Infof("REORGANIZE: searching fork point side=%s main=%s", tip.Hash, best.Hash)
 	maxreorg := 100
-	sidechain, err := c.rpc.GetTips(ctx, maxreorg, tip.Hash)
+	tHash, _ := chain.ParseBlockHash(tip.Hash.String())
+	sidechain, err := c.rpc.GetTips(ctx, maxreorg, tHash)
 	if err != nil || len(sidechain) == 0 {
 		return nil, nil, nil, fmt.Errorf("empty tip chain")
 	}
-	mainchain, err := c.rpc.GetTips(ctx, maxreorg, best.Hash)
+	bHash, _ := chain.ParseBlockHash(best.Hash.String())
+	mainchain, err := c.rpc.GetTips(ctx, maxreorg, bHash)
 	if err != nil || len(mainchain) == 0 {
 		return nil, nil, nil, fmt.Errorf("empty main chain")
 	}

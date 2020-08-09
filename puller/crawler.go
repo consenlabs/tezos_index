@@ -258,7 +258,11 @@ func (c *Crawler) Init(ctx context.Context, mode Mode) error {
 				return err
 			}
 			// keep as best block
-			c.tip.BestHash = genesis.Hash
+			cHash, err := chain.ParseBlockHash(genesis.Hash.String())
+			if err != nil {
+				log.Errorf("parse block hash error; err: %v", err)
+			}
+			c.tip.BestHash = cHash
 			c.tip.BestHeight = genesis.Height
 			c.tip.BestId = genesis.RowId
 			c.tip.BestTime = genesis.Timestamp
@@ -833,12 +837,16 @@ func (c *Crawler) syncBlockchain() {
 			goto again
 		}
 
+		cHash, err := chain.ParseBlockHash(block.Hash.String())
+		if err != nil {
+			log.Errorf("parse block hash error; er %v", err)
+		}
 		// update chain tip
 		newTip := &models.ChainTip{
 			Name:          tip.Name,
 			Symbol:        tip.Symbol,
 			ChainId:       tip.ChainId,
-			BestHash:      block.Hash,
+			BestHash:      cHash,
 			BestId:        block.RowId,
 			BestHeight:    block.Height,
 			BestTime:      block.Timestamp,

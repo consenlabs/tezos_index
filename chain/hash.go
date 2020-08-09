@@ -438,8 +438,8 @@ func (t HashType) Base58Len() int {
 }
 
 type Hash struct {
-	Type HashType
-	Hash []byte
+	Type HashType `json:"type"`
+	Hash []byte   `json:"raw_hash"`
 }
 
 func NewHash(typ HashType, hash []byte) Hash {
@@ -498,7 +498,7 @@ func (h Hash) MarshalBinary() ([]byte, error) {
 
 // ChainIdHash
 type ChainIdHash struct {
-	Hash
+	Hash `json:"hash"`
 }
 
 func NewChainIdHash(buf []byte) ChainIdHash {
@@ -556,7 +556,13 @@ func ParseChainIdHash(s string) (ChainIdHash, error) {
 
 // BlockHash
 type BlockHash struct {
-	Hash
+	Hash `json:"hash"`
+}
+
+type StrBHash string // BlockHash string type
+
+func (s StrBHash) String() string {
+	return string(s)
 }
 
 func NewBlockHash(buf []byte) BlockHash {
@@ -614,7 +620,13 @@ func ParseBlockHash(s string) (BlockHash, error) {
 
 // ProtocolHash
 type ProtocolHash struct {
-	Hash
+	Hash `json:"hash"`
+}
+
+type StrPHash string // protocol hash string type
+
+func (s StrPHash) String() string {
+	return string(s)
 }
 
 func NewProtocolHash(buf []byte) ProtocolHash {
@@ -679,6 +691,12 @@ func ParseProtocolHashSafe(s string) ProtocolHash {
 // OperationHash
 type OperationHash struct {
 	Hash
+}
+
+type StrOpHash string
+
+func (s StrOpHash) String() string {
+	return string(s)
 }
 
 func NewOperationHash(buf []byte) OperationHash {
