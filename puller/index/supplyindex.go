@@ -10,6 +10,8 @@ import (
 	"tezos_index/puller/models"
 )
 
+const SupplyIndexKey = "supply"
+
 type SupplyIndex struct {
 	db *gorm.DB
 }
@@ -20,6 +22,10 @@ func NewSupplyIndex(db *gorm.DB) *SupplyIndex {
 
 func (idx *SupplyIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *SupplyIndex) Key() string {
+	return SupplyIndexKey
 }
 
 func (idx *SupplyIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {

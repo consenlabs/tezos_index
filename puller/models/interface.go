@@ -58,6 +58,9 @@ type BlockBuilder interface {
 // etl.Indexer.
 type BlockIndexer interface {
 
+	// Key returns the key of the index as a string.
+	Key() string
+
 	// ConnectBlock is invoked when the table manager is notified that a new
 	// block has been connected to the main chain.
 	ConnectBlock(ctx context.Context, block *Block, builder BlockBuilder) error

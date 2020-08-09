@@ -5,15 +5,30 @@ package index
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/puller/models"
 )
 
+const BlockIndexKey = "block"
+
 type BlockIndex struct {
 	db *gorm.DB
 }
+
+var (
+	// ErrNoBlockEntry is an error that indicates a requested entry does
+	// not exist in the block bucket.
+	ErrNoBlockEntry = errors.New("block not indexed")
+
+	// ErrInvalidBlockHeight
+	ErrInvalidBlockHeight = errors.New("invalid block height")
+
+	// ErrInvalidBlockHash
+	ErrInvalidBlockHash = errors.New("invalid block hash")
+)
 
 func NewBlockIndex(db *gorm.DB) *BlockIndex {
 	return &BlockIndex{db}
@@ -21,6 +36,10 @@ func NewBlockIndex(db *gorm.DB) *BlockIndex {
 
 func (idx *BlockIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *BlockIndex) Key() string {
+	return BlockIndexKey
 }
 
 func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b models.BlockBuilder) error {

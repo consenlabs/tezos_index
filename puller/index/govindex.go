@@ -38,6 +38,8 @@ var (
 	ErrNoBallotEntry = errors.New("ballot not found")
 )
 
+const GovIndexKey = "gov"
+
 type GovIndex struct {
 	db *gorm.DB
 }
@@ -48,6 +50,10 @@ func NewGovIndex(db *gorm.DB) *GovIndex {
 
 func (idx *GovIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *GovIndex) Key() string {
+	return GovIndexKey
 }
 
 func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {

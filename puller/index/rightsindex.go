@@ -14,6 +14,8 @@ import (
 	"tezos_index/rpc"
 )
 
+const RightsIndexKey = "rights"
+
 type RightsIndex struct {
 	db *gorm.DB
 }
@@ -24,6 +26,10 @@ func NewRightsIndex(db *gorm.DB) *RightsIndex {
 
 func (idx *RightsIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *RightsIndex) Key() string {
+	return RightsIndexKey
 }
 
 func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {

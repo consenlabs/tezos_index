@@ -10,6 +10,8 @@ import (
 	"tezos_index/puller/models"
 )
 
+const ChainIndexKey = "chain"
+
 type ChainIndex struct {
 	db *gorm.DB
 }
@@ -20,6 +22,10 @@ func NewChainIndex(db *gorm.DB) *ChainIndex {
 
 func (idx *ChainIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *ChainIndex) Key() string {
+	return ChainIndexKey
 }
 
 func (idx *ChainIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {

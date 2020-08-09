@@ -175,7 +175,7 @@ func (c *Crawler) Init(ctx context.Context, mode Mode) error {
 
 	// init chain state
 	var err error
-	c.tip, err = models.LoadChainTipFromDb(c.db)
+	c.tip, err = dbLoadChainTip(c.indexer.cachedb)
 	firstRun = err == gorm.ErrRecordNotFound
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
@@ -278,13 +278,13 @@ func (c *Crawler) Init(ctx context.Context, mode Mode) error {
 			return err
 		}
 
-		if mode == MODE_SYNC {
-			// retry database snapshot in case it failed last time
-			if err := c.MaybeSnapshot(ctx); err != nil {
-				c.state = STATE_FAILED
-				return fmt.Errorf("Snapshot failed at block %d: %v", c.Height(), err)
-			}
-		}
+		// if mode == MODE_SYNC {
+		// 	// retry database snapshot in case it failed last time
+		// 	if err := c.MaybeSnapshot(ctx); err != nil {
+		// 		c.state = STATE_FAILED
+		// 		return fmt.Errorf("Snapshot failed at block %d: %v", c.Height(), err)
+		// 	}
+		// }
 	}
 
 	return nil
@@ -701,7 +701,7 @@ func (c *Crawler) syncBlockchain() {
 		}
 
 		// store last chain state
-		err := models.UpdateChainTipDb(c.db, tip)
+		err := dbStoreChainTip(c.indexer.cachedb, tip)
 		if err != nil {
 			log.Errorf("Updating database for block %d: %v", tip.BestHeight, err)
 		}
@@ -915,7 +915,7 @@ func (c *Crawler) syncBlockchain() {
 
 		// update state every 256 blocks or every block when synchronized
 		if state == STATE_SYNCHRONIZED || block.Height&0xff == 0 {
-			err := models.UpdateChainTipDb(c.db, tip)
+			err := dbStoreChainTip(c.indexer.cachedb, tip)
 			if err != nil {
 				log.Errorf("Updating state database for block %d: %v", tip.BestHeight, err)
 				c.Lock()
@@ -926,16 +926,16 @@ func (c *Crawler) syncBlockchain() {
 		}
 
 		// database snapshots
-		if err := c.MaybeSnapshot(ctx); err != nil {
-			log.Errorf("Snapshot failed at block %d: %v", tip.BestHeight, err)
-			// only fail on configured snapshot blocks
-			if c.snap != nil && (len(c.snap.Blocks) > 0 || c.snap.BlockInterval > 0) {
-				c.Lock()
-				c.state = STATE_FAILED
-				c.Unlock()
-				return
-			}
-		}
+		// if err := c.MaybeSnapshot(ctx); err != nil {
+		// 	log.Errorf("Snapshot failed at block %d: %v", tip.BestHeight, err)
+		// 	// only fail on configured snapshot blocks
+		// 	if c.snap != nil && (len(c.snap.Blocks) > 0 || c.snap.BlockInterval > 0) {
+		// 		c.Lock()
+		// 		c.state = STATE_FAILED
+		// 		c.Unlock()
+		// 		return
+		// 	}
+		// }
 
 		if c.stopHeight > 0 && tip.BestHeight >= c.stopHeight {
 			log.Infof("Stopping blockchain sync after block height %d.", tip.BestHeight)

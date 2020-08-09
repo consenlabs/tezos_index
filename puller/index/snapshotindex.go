@@ -36,6 +36,10 @@ func (idx *SnapshotIndex) DB() *gorm.DB {
 	return idx.db
 }
 
+func (idx *SnapshotIndex) Key() string {
+	return SnapshotIndexKey
+}
+
 func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
 	// handle snapshot index
 	if block.TZ.Snapshot != nil {

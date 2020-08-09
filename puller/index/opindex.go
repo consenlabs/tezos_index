@@ -40,6 +40,10 @@ func (idx *OpIndex) DB() *gorm.DB {
 	return idx.db
 }
 
+func (idx *OpIndex) Key() string {
+	return OpIndexKey
+}
+
 func (idx *OpIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
 	ops := make([]*models.Op, 0, len(block.Ops))
 	for _, op := range block.Ops {

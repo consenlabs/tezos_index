@@ -4,12 +4,19 @@ package index
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/chain"
 	"tezos_index/puller/models"
 	"tezos_index/rpc"
+)
+
+const ContractIndexKey = "contract"
+
+var (
+	ErrNoContractEntry = errors.New("contract not indexed")
 )
 
 type ContractIndex struct {
@@ -22,6 +29,10 @@ func NewContractIndex(db *gorm.DB) *ContractIndex {
 
 func (idx *ContractIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *ContractIndex) Key() string {
+	return ContractIndexKey
 }
 
 func (idx *ContractIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {

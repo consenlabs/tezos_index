@@ -38,6 +38,10 @@ func (idx *IncomeIndex) DB() *gorm.DB {
 	return idx.db
 }
 
+func (idx *IncomeIndex) Key() string {
+	return IncomeIndexKey
+}
+
 func (idx *IncomeIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
 	// ignore genesis block
 	if block.Height == 0 {

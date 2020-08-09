@@ -10,6 +10,8 @@ import (
 	"tezos_index/puller/models"
 )
 
+const FlowIndexKey = "flow"
+
 type FlowIndex struct {
 	db *gorm.DB
 }
@@ -20,6 +22,10 @@ func NewFlowIndex(db *gorm.DB) *FlowIndex {
 
 func (idx *FlowIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *FlowIndex) Key() string {
+	return FlowIndexKey
 }
 
 func (idx *FlowIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
