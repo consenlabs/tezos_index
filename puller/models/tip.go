@@ -4,12 +4,14 @@
 package models
 
 import (
+	"github.com/jinzhu/gorm"
 	"tezos_index/chain"
 	"time"
 )
 
 // ChainTip reflects the blockchain state at the currently indexed height.
 type ChainTip struct {
+	gorm.Model
 	Name          string            `json:"name"`         // chain name, e.g. Bitcoin
 	Symbol        string            `json:"symbol"`       // chain symbol, e.g. BTC
 	ChainId       chain.ChainIdHash `json:"chain_id"`     // chain identifier (same for all blocks)

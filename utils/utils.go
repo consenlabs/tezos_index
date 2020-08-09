@@ -1,59 +1,10 @@
-package utils
+package util
 
-import "sort"
-
-func Max64(x, y int64) int64 {
-	if x < y {
-		return y
-	}
-	return x
-}
-
-func NonZeroMin64(x ...int64) int64 {
-	var min int64
-	for _, v := range x {
-		if v != 0 {
-			if min == 0 {
-				min = v
-			} else {
-				min = Min64(min, v)
-			}
-		}
-	}
-	return min
-}
-
-func Min64(x, y int64) int64 {
-	if x > y {
-		return y
-	}
-	return x
-}
-
-func Max64N(nums ...int64) int64 {
-	switch len(nums) {
-	case 0:
-		return 0
-	case 1:
-		return nums[0]
-	default:
-		n := nums[0]
-		for _, v := range nums[1:] {
-			if v > n {
-				n = v
-			}
-		}
-		return n
-	}
-}
-
-func Max(x, y int) int {
-	if x < y {
-		return y
-	} else {
-		return x
-	}
-}
+import (
+	"fmt"
+	"sort"
+	"tezos_index/micheline"
+)
 
 type Uint64Sorter []uint64
 
@@ -83,4 +34,23 @@ func UniqueUint64Slice(a []uint64) []uint64 {
 		b[j] = b[i]
 	}
 	return b[:j+1]
+}
+
+// Smart Contract Storage Access
+var vestingContractBalancePath = []int{1, 0, 0, 0}
+
+func GetVestingBalance(prim *micheline.Prim) (int64, error) {
+	if prim == nil {
+		return 0, nil
+	}
+	for i, v := range vestingContractBalancePath {
+		if len(prim.Args) < v+1 {
+			return 0, fmt.Errorf("non existing path at %v in vesting contract storage", vestingContractBalancePath[:i])
+		}
+		prim = prim.Args[v]
+	}
+	if prim.Type != micheline.PrimInt {
+		return 0, fmt.Errorf("unexpected prim type %s for vesting contract balance", prim.Type)
+	}
+	return prim.Int.Int64(), nil
 }

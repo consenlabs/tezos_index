@@ -304,8 +304,8 @@ func (a *Account) UpdateBalance(f *Flow) error {
 				a.TotalSent += f.AmountOut
 				// update generation for in-flows
 				if f.AmountIn > 0 {
-					a.TokenGenMax = utils.Max64(a.TokenGenMax, f.TokenGenMax+1)
-					a.TokenGenMin = utils.NonZeroMin64(a.TokenGenMin, f.TokenGenMin+1)
+					a.TokenGenMax = util.Max64(a.TokenGenMax, f.TokenGenMax+1)
+					a.TokenGenMin = util.NonZeroMin64(a.TokenGenMin, f.TokenGenMin+1)
 				}
 			}
 		case FlowTypeVest, FlowTypeActivation:
@@ -343,7 +343,7 @@ func (a *Account) UpdateBalance(f *Flow) error {
 	}
 
 	a.IsFunded = (a.FrozenBalance() + a.SpendableBalance + a.UnclaimedBalance) > 0
-	a.LastSeen = utils.Max64N(a.LastSeen, a.LastIn, a.LastOut)
+	a.LastSeen = util.Max64N(a.LastSeen, a.LastIn, a.LastOut)
 
 	// reset token generation
 	if !a.IsFunded {
@@ -441,7 +441,7 @@ func (a *Account) RollbackBalance(f *Flow) error {
 	// and rely on subsequent block updates, we still set LastSeen to the current
 	// block
 	a.IsFunded = (a.FrozenBalance() + a.SpendableBalance + a.UnclaimedBalance) > 0
-	a.LastSeen = utils.Min64(f.Height, utils.Max64N(a.LastIn, a.LastOut))
+	a.LastSeen = util.Min64(f.Height, util.Max64N(a.LastIn, a.LastOut))
 	return nil
 }
 
@@ -452,5 +452,5 @@ func (a *Account) InitGracePeriod(cycle int64, params *chain.Params) {
 
 // keep initial (+11) max grace period, otherwise cycle + 6
 func (a *Account) UpdateGracePeriod(cycle int64, params *chain.Params) {
-	a.GracePeriod = utils.Max64(cycle+params.PreservedCycles+1, a.GracePeriod)
+	a.GracePeriod = util.Max64(cycle+params.PreservedCycles+1, a.GracePeriod)
 }

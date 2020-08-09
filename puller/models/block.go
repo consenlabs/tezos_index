@@ -161,7 +161,7 @@ func NewBlock(tz *Bundle, parent *Block) (*Block, error) {
 	if parent != nil {
 		b.ParentId = parent.RowId
 		b.Parent = parent
-		b.Solvetime = utils.Max(0, int(b.Timestamp.Sub(parent.Timestamp)/time.Second))
+		b.Solvetime = util.Max(0, int(b.Timestamp.Sub(parent.Timestamp)/time.Second))
 		if parent.Chain != nil {
 			*b.Chain = *parent.Chain // copy
 		}

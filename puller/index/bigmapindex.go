@@ -4,6 +4,7 @@ package index
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
@@ -13,6 +14,12 @@ import (
 	"tezos_index/rpc"
 	"tezos_index/utils"
 )
+
+var (
+	ErrNoBigMapEntry = errors.New("bigmap not indexed")
+)
+
+const BigMapIndexKey = "bigmap"
 
 type BigMapIndex struct {
 	db *gorm.DB
@@ -24,6 +31,10 @@ func NewBigMapIndex(db *gorm.DB) *BigMapIndex {
 
 func (idx *BigMapIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *BigMapIndex) Key() string {
+	return BigMapIndexKey
 }
 
 // asumes op ids are already set (must run after OpIndex)
@@ -239,7 +250,7 @@ func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64) error {
 
 	// load update items
 	// 去重
-	ids = utils.UniqueUint64Slice(ids)
+	ids = util.UniqueUint64Slice(ids)
 	if len(ids) > 0 && ids[0] == 0 {
 		ids = ids[1:]
 	}

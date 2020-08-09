@@ -4,10 +4,17 @@ package index
 
 import (
 	"context"
+	"errors"
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/puller/models"
 	"tezos_index/utils"
+)
+
+const AccountIndexKey = "account"
+
+var (
+	ErrNoAccountEntry = errors.New("account not indexed")
 )
 
 type AccountIndex struct {
@@ -20,6 +27,10 @@ func NewAccountIndex(db *gorm.DB) *AccountIndex {
 
 func (idx *AccountIndex) DB() *gorm.DB {
 	return idx.db
+}
+
+func (idx *AccountIndex) Key() string {
+	return AccountIndexKey
 }
 
 func (idx *AccountIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
@@ -73,7 +84,7 @@ func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Bloc
 	// delete account
 	if len(del) > 0 {
 		// remove duplicates and sort; returns new slice
-		del = utils.UniqueUint64Slice(del)
+		del = util.UniqueUint64Slice(del)
 		log.Debugf("Rollback removing accounts %#v", del)
 		if err := idx.DB().Where("row_id in (?)", del).Delete(&models.Account{}).Error; err != nil {
 			log.Errorf("batch delete account error: %v", err)
