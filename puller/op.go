@@ -9,14 +9,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/zyjblockchain/sandy_log/log"
 	"strconv"
 	"tezos_index/chain"
 	"tezos_index/puller/index"
+	. "tezos_index/puller/models"
 	"tezos_index/rpc"
 	util "tezos_index/utils"
 	"time"
-
-	. "tezos_index/puller/models"
 )
 
 func (b *Builder) NewActivationOp(ctx context.Context, oh *rpc.OperationHeader, op_n, op_c int, rollback bool) error {

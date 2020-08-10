@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jinzhu/gorm"
+	"github.com/zyjblockchain/sandy_log/log"
 	"sort"
 	"tezos_index/chain"
 	"tezos_index/micheline"
@@ -326,7 +327,7 @@ func (m *Indexer) BlockByHash(ctx context.Context, h chain.BlockHash) (*models.B
 	}
 
 	b := &models.Block{}
-	err := m.statedb.Where("hash = ?", h.Hash.Hash[:]).First(&b).Error
+	err := m.statedb.Where("hash = ?", h.Hash.String()).First(&b).Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, index.ErrNoBlockEntry
 	}
@@ -523,44 +524,20 @@ func (m *Indexer) BlockByHash(ctx context.Context, h chain.BlockHash) (*models.B
 // 	return resp, nil
 // }
 
-// func (m *Indexer) LookupAccount(ctx context.Context, addr chain.Address) (*models.Account, error) {
-// 	if !addr.IsValid() {
-// 		return nil, ErrInvalidHash
-// 	}
-//
-// 	table, err := m.Table(index.AccountTableKey)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-//
-// 	res, err := table.Query(ctx, pack.Query{
-// 		Name: "api.search_account_hash",
-// 		Conditions: pack.ConditionList{
-// 			pack.Condition{
-// 				Field: table.Fields().Find("H"), // hash
-// 				Mode:  pack.FilterModeEqual,
-// 				Value: addr.Hash, // must be []byte
-// 			},
-// 			pack.Condition{
-// 				Field: table.Fields().Find("t"), // type
-// 				Mode:  pack.FilterModeEqual,
-// 				Value: int64(addr.Type), // must be int64
-// 			}},
-// 	})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	defer res.Close()
-// 	if res.Rows() == 0 {
-// 		return nil, index.ErrNoAccountEntry
-// 	}
-// 	acc := model.AllocAccount()
-// 	if err := res.DecodeAt(0, acc); err != nil {
-// 		acc.Free()
-// 		return nil, err
-// 	}
-// 	return acc, nil
-// }
+func (m *Indexer) LookupAccount(ctx context.Context, addr chain.Address) (*models.Account, error) {
+	if !addr.IsValid() {
+		return nil, ErrInvalidHash
+	}
+	acc := &models.Account{}
+	err := m.statedb.Where("hash = ? and address_type = ?", addr.Hash, addr.Type).First(acc).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, index.ErrNoAccountEntry
+	}
+	if err != nil {
+		return nil, err
+	}
+	return acc, nil
+}
 
 // func (m *Indexer) LookupContract(ctx context.Context, addr chain.Address) (*models.Contract, error) {
 // 	if !addr.IsValid() {
@@ -836,83 +813,29 @@ func (m *Indexer) ListAllDelegates(ctx context.Context) ([]*models.Account, erro
 // 	return m.LookupAccountId(ctx, o.SenderId)
 // }
 
-// func (m *Indexer) FindLatestDelegation(ctx context.Context, id model.AccountID) (*models.Op, error) {
-// 	table, err := m.Table(index.OpTableKey)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	q := pack.Query{
-// 		Name:    "api.search_delegation",
-// 		NoCache: true,
-// 		Fields:  table.Fields(),
-// 		Order:   pack.OrderDesc,
-// 		Limit:   1,
-// 		Conditions: pack.ConditionList{
-// 			pack.Condition{
-// 				Field: table.Fields().Find("t"), // type
-// 				Mode:  pack.FilterModeEqual,
-// 				Value: int64(chain.OpTypeDelegation),
-// 			},
-// 			pack.Condition{
-// 				Field: table.Fields().Find("S"), // search for sender account id
-// 				Mode:  pack.FilterModeEqual,
-// 				Value: id.Value(),
-// 			},
-// 			pack.Condition{
-// 				Field: table.Fields().Find("D"), // delegate id
-// 				Mode:  pack.FilterModeNotEqual,
-// 				Value: uint64(0),
-// 			},
-// 		},
-// 	}
-// 	o := &model.Op{}
-// 	err = table.Stream(ctx, q, func(r pack.Row) error {
-// 		return r.Decode(o)
-// 	})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if o.RowId == 0 {
-// 		return nil, index.ErrNoOpEntry
-// 	}
-// 	return o, nil
-// }
+func (m *Indexer) FindLatestDelegation(ctx context.Context, id models.AccountID) (*models.Op, error) {
+	o := &models.Op{}
+	err := m.statedb.Where("type = ? and sender_id = ? and delegate_id = ?", int64(chain.OpTypeDelegation), id.Value(), uint64(0)).Last(o).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, index.ErrNoOpEntry
+	}
+	if err != nil {
+		return nil, err
+	}
+	return o, nil
+}
 
-// func (m *Indexer) FindOrigination(ctx context.Context, id model.AccountID) (*models.Op, error) {
-// 	table, err := m.Table(index.OpTableKey)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	q := pack.Query{
-// 		Name:    "api.search_origination",
-// 		NoCache: true,
-// 		Fields:  table.Fields(),
-// 		Limit:   1,
-// 		Conditions: pack.ConditionList{
-// 			pack.Condition{
-// 				Field: table.Fields().Find("t"), // type
-// 				Mode:  pack.FilterModeEqual,
-// 				Value: int64(chain.OpTypeOrigination),
-// 			},
-// 			pack.Condition{
-// 				Field: table.Fields().Find("R"), // search for account id
-// 				Mode:  pack.FilterModeEqual,
-// 				Value: id.Value(),
-// 			},
-// 		},
-// 	}
-// 	o := &model.Op{}
-// 	err = table.Stream(ctx, q, func(r pack.Row) error {
-// 		return r.Decode(o)
-// 	})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if o.RowId == 0 {
-// 		return nil, index.ErrNoOpEntry
-// 	}
-// 	return o, nil
-// }
+func (m *Indexer) FindOrigination(ctx context.Context, id models.AccountID) (*models.Op, error) {
+	o := &models.Op{}
+	err := m.statedb.Where("type = ? and receiver_id = ?", chain.OpTypeOrigination, id.Value()).First(o).Error
+	if err == gorm.ErrRecordNotFound {
+		return nil, index.ErrNoOpEntry
+	}
+	if err != nil {
+		return nil, err
+	}
+	return o, nil
+}
 
 // func (m *Indexer) LookupOpIds(ctx context.Context, ids []uint64) ([]*models.Op, error) {
 // 	table, err := m.Table(index.OpTableKey)

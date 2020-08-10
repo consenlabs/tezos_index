@@ -6,11 +6,11 @@ package puller
 import (
 	"bytes"
 	"fmt"
+	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/micheline"
+	. "tezos_index/puller/models"
 	"tezos_index/rpc"
 	util "tezos_index/utils"
-
-	. "tezos_index/puller/models"
 )
 
 // - baker pays deposit and receives block rewards+fees

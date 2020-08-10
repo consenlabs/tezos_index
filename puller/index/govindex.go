@@ -148,7 +148,7 @@ func (idx *GovIndex) openElection(ctx context.Context, block *models.Block, buil
 		NumPeriods:   1,
 		VotingPeriod: block.TZ.Block.Metadata.Level.VotingPeriod,
 		StartTime:    block.Timestamp,
-		EndTime:      time.Time{}.UTC(), // set on close
+		EndTime:      time.Date(2050, 1, 1, 0, 0, 0, 0, time.UTC), // set on close
 		StartHeight:  block.Height,
 		EndHeight:    0, // set on close
 		IsEmpty:      true,
@@ -222,7 +222,7 @@ func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder 
 		VotingPeriod:     block.TZ.Block.Metadata.Level.VotingPeriod,
 		VotingPeriodKind: block.VotingPeriodKind,
 		StartTime:        block.Timestamp,
-		EndTime:          time.Time{}.UTC(), // set on close
+		EndTime:          time.Date(2050, 1, 1, 0, 0, 0, 0, time.UTC), // set on close
 		StartHeight:      block.Height,
 		EndHeight:        endHeight,
 		IsOpen:           true,

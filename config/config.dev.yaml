@@ -1,0 +1,85 @@
+listen: 0.0.0.0:9000
+api-url: http://api.tokenlon.im
+## 1) bitecoin
+# bitcoin:
+#     mysql: "root:root@tcp(localhost:3306)/ltc_testnet"
+#     redis: redis://127.0.0.1:6379/0
+#     chain: http://127.0.0.1:27332
+#     network: testnet
+#     port: 9000
+#     mempool: "on"
+#     fork: "bitcoin"
+    
+## 2) litecoin
+# bitcoin:
+#     mysql: "root:p6AYbcggh6Y6jYym7CzZ@tcp(localhost:3306)/ltc_testnet"
+#     redis: redis://127.0.0.1:6379/0
+#     chain: http://127.0.0.1:27332
+#     network: testnet
+#     port: 9000
+#     mempool: "on"
+#     fork: "litecoin
+
+
+## 3) bicoincash
+bitcoin:
+    mysql: "root:WcGsHDMBmcv7mc#QWkuR@tcp(127.0.0.1:3306)/btc_mainnet"
+    redis: redis://127.0.0.1:6379/0
+    chain: http://127.0.0.1:27332
+    network: testnet
+    port: 9000
+    mempool: "on"
+    fork: "bitcoin"
+
+ethereum:
+    mysql: root:WcGsHDMBmcv7mc#QWkuR@tcp(127.0.0.1:3306)/eth_mainnet
+    redis: redis://127.0.0.1:6379/1
+    chain: http://192.168.3.40:8545
+    gas-station-url: https://biz.token.im/api/ethgas
+    network: mainnet
+    port: 9000
+
+application:
+    secert: imTokenTest
+
+tron:
+    mysql: "root:WcGsHDMBmcv7mc#QWkuR@tcp(localhost:3306)/tron_testnet"
+    sentry: "http://89a23c5b7cda42888dfa0c1e29bb9313@sentry.monit.qianbao.io/22"
+    tronscan: "https://api.shasta.tronscan.org"
+    listen: "localhost:9000"
+    verbose: "debug"
+    upyun:
+      bucket: "v2-cdn-dev"
+      operator: "cmsoperator"
+      password: ""
+      uri: "/app-mainnet-development/tokens/icons"
+      host: "https://v2-cdn-dev.token.im"
+
+cosmos:
+    mysql: "root:WcGsHDMBmcv7mc#QWkuR@tcp(localhost:3306)/cosmos"
+    chain: "https://cosmos-restserver-mainnet.token.im"
+    redis: redis://127.0.0.1:6379/1
+
+nervosckb:
+    postgres: "root:WcGsHDMBmcv7mc#QWkuR@tcp(localhost:3306)/nervos_ckb_testnet"
+    # postgres: "postgres://postgres:postgres@127.0.0.1:5432/ckb_explorer_development?sslmode=disable;"
+    rabbitmq: "amqp://guest:guest@127.0.0.1:5672/"
+    redis: redis://127.0.0.1:6379/7
+    chain: https://ckb-testnet.tokenlon.im
+    network: testnet
+    port: 9000
+
+polkadot:
+    mysql: "root:WcGsHDMBmcv7mc#QWkuR@tcp(127.0.0.1:3306)/polkadot_test"
+    redis: redis://127.0.0.1:6379/1
+    chain: ws://10.80.11.24:9944
+    external_chain: ws://10.80.11.24:9944
+
+tezos:
+    mysql: root:WcGsHDMBmcv7mc#QWkuR@tcp(127.0.0.1:3306)/tezos_index?charset=utf8mb4&parseTime=True&loc=Local
+    redis: 127.0.0.1:6379
+#    chain: http://127.0.0.1:8732
+    chain: https://mainnet-tezos.giganode.io
+    proxy: http://127.0.0.1:8001
+    network: mainnet
+    port: 9000

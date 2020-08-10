@@ -80,13 +80,16 @@ func (idx *ContractIndex) ConnectBlock(ctx context.Context, block *models.Block,
 	}
 	// insert, will generate unique row ids
 	if len(ct) > 0 {
-		return insertBatch(ct)
+		return BatchInsertContracts(ct, idx.DB())
 	} else {
 		return nil
 	}
 }
 
-func insertBatch(records []*models.Contract) error {
+func BatchInsertContracts(records []*models.Contract, db *gorm.DB) error {
+	if len(records) == 0 {
+		return nil
+	}
 	sql := "INSERT INTO `contracts` (`hash`, `account_id`, `manager_id`, `height`, `fee`, `gas_limit`, `gas_used`, `gas_price`, `storage_limit`," +
 		" `storage_size`, `storage_paid`, `script`, `is_spendable`, `is_delegatable`) VALUES "
 	// 循环data数组,组合sql语句
@@ -104,7 +107,7 @@ func insertBatch(records []*models.Contract) error {
 				value.IsDelegatable)
 		}
 	}
-	err := DB.Exec(sql).Error
+	err := db.Exec(sql).Error
 	return err
 }
 

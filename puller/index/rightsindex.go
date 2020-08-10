@@ -159,16 +159,44 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 		ins = append(ins, r)
 	}
 
-	// todo batch insert
-	tx = idx.DB().Begin()
-	for _, v := range ins {
-		if err := tx.Create(v).Error; err != nil {
-			tx.Rollback()
-			return err
+	// // todo batch insert
+	// tx = idx.DB().Begin()
+	// for _, v := range ins {
+	// 	if err := tx.Create(v).Error; err != nil {
+	// 		tx.Rollback()
+	// 		return err
+	// 	}
+	// }
+	// tx.Commit()
+	if err := batchInsertRights(ins, idx.DB()); err != nil {
+		log.Errorf("batch insert rights error: %v", err)
+		return err
+	}
+	return nil
+}
+
+func batchInsertRights(records []*models.Right, db *gorm.DB) error {
+	if len(records) == 0 {
+		return nil
+	}
+	log.Debugf("start batch insert rights; length = %d", len(records))
+	sql := "INSERT INTO `rights` (`type`, `height`, `cycle`, `priority`, `account_id`, `is_lost`, `is_stolen`, `is_missed`, `is_seed_required`," +
+		" `is_seed_revealed`) VALUES "
+	// 循环data数组,组合sql语句
+	for key, value := range records {
+		if len(records)-1 == key {
+			// 最后一条数据 以分号结尾
+			sql += fmt.Sprintf("('%d','%d','%d','%d','%d','%t','%t','%t','%t','%t');",
+				value.Type, value.Height, value.Cycle, value.Priority, value.AccountId,
+				value.IsLost, value.IsStolen, value.IsMissed, value.IsSeedRequired, value.IsSeedRevealed)
+		} else {
+			sql += fmt.Sprintf("('%d','%d','%d','%d','%d','%t','%t','%t','%t','%t'),",
+				value.Type, value.Height, value.Cycle, value.Priority, value.AccountId,
+				value.IsLost, value.IsStolen, value.IsMissed, value.IsSeedRequired, value.IsSeedRevealed)
 		}
 	}
-	tx.Commit()
-	return nil
+	err := db.Exec(sql).Error
+	return err
 }
 
 func (idx *RightsIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {

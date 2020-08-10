@@ -34,6 +34,10 @@ type IncomeIndex struct {
 	db *gorm.DB
 }
 
+func NewIncomeIndex(db *gorm.DB) *IncomeIndex {
+	return &IncomeIndex{db}
+}
+
 func (idx *IncomeIndex) DB() *gorm.DB {
 	return idx.db
 }

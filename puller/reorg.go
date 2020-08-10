@@ -7,10 +7,10 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/chain"
-	util "tezos_index/utils"
-
 	. "tezos_index/puller/models"
+	util "tezos_index/utils"
 )
 
 func (c *Crawler) Rollback(ctx context.Context, height int64, ignoreErrors bool) error {

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/jinzhu/gorm"
+	"github.com/zyjblockchain/sandy_log/log"
 	"runtime/debug"
 	"sync"
 	"tezos_index/chain"
@@ -40,12 +41,12 @@ const (
 )
 
 type CrawlerConfig struct {
-	DB            *gorm.DB
-	Indexer       *Indexer
-	Client        *rpc.Client
-	Queue         int
-	StopBlock     int64
-	Snapshot      *SnapshotConfig
+	DB        *gorm.DB
+	Indexer   *Indexer
+	Client    *rpc.Client
+	Queue     int
+	StopBlock int64
+	// Snapshot      *SnapshotConfig
 	EnableMonitor bool
 }
 
@@ -60,9 +61,9 @@ type SnapshotConfig struct {
 // It also handles chain reorganizations and API calls.
 type Crawler struct {
 	sync.RWMutex
-	state         State
-	mode          Mode
-	snap          *SnapshotConfig
+	state State
+	mode  Mode
+	// snap          *SnapshotConfig
 	useMonitor    bool
 	enableMonitor bool
 	stopHeight    int64
@@ -89,9 +90,9 @@ type Crawler struct {
 
 func NewCrawler(cfg CrawlerConfig) *Crawler {
 	return &Crawler{
-		state:         STATE_LOADING,
-		mode:          MODE_SYNC,
-		snap:          cfg.Snapshot,
+		state: STATE_LOADING,
+		mode:  MODE_SYNC,
+		// snap:          cfg.Snapshot,
 		useMonitor:    false,
 		enableMonitor: cfg.EnableMonitor,
 		stopHeight:    cfg.StopBlock,
@@ -101,8 +102,8 @@ func NewCrawler(cfg CrawlerConfig) *Crawler {
 		indexer:       cfg.Indexer,
 		queue:         make(chan *models.Bundle, cfg.Queue),
 		params:        chain.NewParams(),
-		plog:          NewBlockProgressLogger("Processed"),
-		quit:          make(chan struct{}),
+		// plog:          NewBlockProgressLogger("Processed"),
+		quit: make(chan struct{}),
 	}
 }
 
@@ -176,14 +177,14 @@ func (c *Crawler) Init(ctx context.Context, mode Mode) error {
 	// init chain state
 	var err error
 	c.tip, err = dbLoadChainTip(c.indexer.cachedb)
-	firstRun = err == gorm.ErrRecordNotFound
-	if err != nil && err != gorm.ErrRecordNotFound {
+	firstRun = err == ErrNoChainTip
+	if err != nil && !firstRun {
 		return err
 	}
 
 	if firstRun {
-		// create initial state
-		log.Info("Creating blockchain storage.")
+		// create initial cache
+		log.Info("Creating blockchain cache.")
 		c.tip = &models.ChainTip{
 			BestHeight: -1,
 			Name:       c.params.Name,
@@ -362,6 +363,7 @@ func (c *Crawler) runMonitor(next chan<- chain.BlockHash) {
 		}
 	}()
 	for {
+		log.Debugf("For runMonitor...")
 		// check context cancellation
 		select {
 		case <-c.quit:
@@ -460,6 +462,7 @@ func (c *Crawler) runIngest(next chan chain.BlockHash) {
 	}()
 
 	for {
+		log.Debugf("For runIngest...")
 		select {
 		case <-tick.C:
 			if !c.useMonitor {
@@ -532,7 +535,7 @@ func (c *Crawler) runIngest(next chan chain.BlockHash) {
 			if util.InterruptRequested(c.ctx) {
 				continue
 			}
-			log.Tracef("Fetching next block %d %s", lastblock+1, nextHash)
+			// log.Tracef("Fetching next block %d %s", lastblock+1, nextHash)
 
 			var (
 				tzblock *models.Bundle
@@ -540,14 +543,24 @@ func (c *Crawler) runIngest(next chan chain.BlockHash) {
 			)
 			if nextHash.IsValid() {
 				tzblock, err = c.fetchBlockByHash(c.ctx, nextHash)
+				if err != nil {
+					log.Errorf("fetch block by hash error; err: %v", err)
+				} else {
+					log.Debugf("fetch block by hash success; hash: %s", tzblock.Block.Hash.String())
+				}
 			} else {
 				tzblock, err = c.fetchBlockByHeight(c.ctx, lastblock+1)
+				if err != nil {
+					log.Errorf("fetch block by height error; err: %v", err)
+				} else {
+					log.Debugf("fetch block by height success; height: %d", tzblock.Block.Header.Level)
+				}
 			}
 
 			// be resilient to network errors
 			if tzblock != nil {
 				// push block into queue; may block
-				log.Tracef("Queuing block %d %s", tzblock.Height(), tzblock.Hash())
+				// log.Tracef("Queuing block %d %s", tzblock.Height(), tzblock.Hash())
 				select {
 				case <-c.quit:
 					continue
@@ -715,6 +728,7 @@ func (c *Crawler) syncBlockchain() {
 
 	// process new blocks as they arrive
 	for {
+		log.Debugf("syncBlockchain for ...")
 		select {
 		case <-c.quit:
 			c.Lock()
@@ -736,7 +750,7 @@ func (c *Crawler) syncBlockchain() {
 			c.Lock()
 			c.state = STATE_SYNCHRONIZING
 			c.Unlock()
-			log.Tracef("Processing block %d %s", tzblock.Height(), tzblock.Hash())
+			// log.Tracef("Processing block %d %s", tzblock.Height(), tzblock.Hash())
 		}
 
 	again:
@@ -756,8 +770,9 @@ func (c *Crawler) syncBlockchain() {
 		}
 
 		// time block processing
-		blockstart := time.Now()
+		// blockstart := time.Now()
 
+		// block chain fork
 		// detect and process reorg (skip for genesis block)
 		if tip.BestHeight > 0 && tip.BestHash.String() != tzblock.Parent().String() {
 			log.Infof("Reorg at height %d: parent %s is not on our main chain, have %s",
@@ -878,19 +893,19 @@ func (c *Crawler) syncBlockchain() {
 		c.Unlock()
 
 		// trace progress
-		log.Tracef("block %d ts=%s tx=%d/%d acc=%d/%d vol=%d rwd=%d fee=%d burn=%d q=%d\n",
-			block.Height,
-			block.Timestamp.Format(time.RFC3339),
-			block.NOps,
-			block.Chain.TotalOps,
-			block.SeenAccounts,
-			block.Chain.TotalAccounts,
-			block.Volume,
-			block.Rewards,
-			block.Fees,
-			block.BurnedSupply,
-			len(c.queue),
-		)
+		// log.Tracef("block %d ts=%s tx=%d/%d acc=%d/%d vol=%d rwd=%d fee=%d burn=%d q=%d\n",
+		// 	block.Height,
+		// 	block.Timestamp.Format(time.RFC3339),
+		// 	block.NOps,
+		// 	block.Chain.TotalOps,
+		// 	block.SeenAccounts,
+		// 	block.Chain.TotalAccounts,
+		// 	block.Volume,
+		// 	block.Rewards,
+		// 	block.Fees,
+		// 	block.BurnedSupply,
+		// 	len(c.queue),
+		// )
 
 		// current block may be ahead of bcinfo by one
 		c.Lock()
@@ -919,7 +934,7 @@ func (c *Crawler) syncBlockchain() {
 		}
 
 		// log progress once every 10sec
-		c.plog.LogBlockHeight(block, len(c.queue), state, time.Since(blockstart))
+		// c.plog.LogBlockHeight(block, len(c.queue), state, time.Since(blockstart))
 
 		// update state every 256 blocks or every block when synchronized
 		if state == STATE_SYNCHRONIZED || block.Height&0xff == 0 {
@@ -959,6 +974,7 @@ func (c *Crawler) syncBlockchain() {
 func (c *Crawler) fetchBlockByHash(ctx context.Context, blockID chain.BlockHash) (*models.Bundle, error) {
 	b := &models.Bundle{}
 	var err error
+	log.Debugf("Start fetch block by hash; blockHash: %s", blockID.String())
 	if b.Block, err = c.rpc.GetBlock(ctx, blockID); err != nil {
 		return nil, err
 	}
@@ -1018,9 +1034,11 @@ func (c *Crawler) fetchBlockByHash(ctx context.Context, blockID chain.BlockHash)
 func (c *Crawler) fetchBlockByHeight(ctx context.Context, height int64) (*models.Bundle, error) {
 	b := &models.Bundle{}
 	var err error
+	log.Debugf("Start fetch block by height; height: %d", height)
 	if b.Block, err = c.rpc.GetBlockHeight(ctx, height); err != nil {
 		return nil, err
 	}
+	log.Debugf("rpc get block by height success; height: %v", height)
 	if c.tip.ChainId.IsValid() && !c.tip.ChainId.IsEqual(b.Block.ChainId) {
 		return nil, fmt.Errorf("block init: invalid chain %s (expected %s)",
 			b.Block.ChainId, c.tip.ChainId)

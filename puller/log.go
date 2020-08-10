@@ -4,6 +4,7 @@
 package puller
 
 import (
+	"github.com/zyjblockchain/sandy_log/log"
 	"sync"
 	"tezos_index/puller/models"
 	"time"
@@ -11,18 +12,18 @@ import (
 	logpkg "github.com/echa/log"
 )
 
-var log logpkg.Logger = logpkg.Log
+// var log logpkg.Logger = logpkg.Log
 
 func init() {
 	DisableLog()
 }
 
 func DisableLog() {
-	log = logpkg.Disabled
+	// log = logpkg.Disabled
 }
 
 func UseLogger(logger logpkg.Logger) {
-	log = logger
+	// log = logger
 }
 
 type logClosure func() string

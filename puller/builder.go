@@ -7,14 +7,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/cespare/xxhash"
+	"github.com/jinzhu/gorm"
+	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/chain"
 	"tezos_index/micheline"
 	"tezos_index/puller/index"
 	"tezos_index/puller/models"
 	"tezos_index/rpc"
 	util "tezos_index/utils"
-
-	"github.com/cespare/xxhash"
 )
 
 func hashKey(typ chain.AddressType, h []byte) uint64 {
@@ -208,6 +209,7 @@ func (b *Builder) Init(ctx context.Context, tip *models.ChainTip, c *rpc.Client)
 }
 
 func (b *Builder) Build(ctx context.Context, tz *models.Bundle) (*models.Block, error) {
+	log.Debugf("start build block; height: %d, hash: %s", tz.Block.Header.Level, tz.Block.Hash.String())
 	// 1  create a new block structure to house extracted data
 	var err error
 	if b.block, err = models.NewBlock(tz, b.parent); err != nil {
@@ -394,6 +396,7 @@ func (b *Builder) CleanReorg() {
 // worst case we fetch an undesired address more, but we'll never use it.
 //
 func (b *Builder) InitAccounts(ctx context.Context) error {
+	log.Debugf("start InitAccounts function")
 	// collect unique accounts/addresses
 	addresses := make(util.StringList, 0)
 
@@ -431,7 +434,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 			if _, ok := b.branches[br]; !ok {
 				branch, err := b.idx.BlockByHash(ctx, oh.Branch)
 				if err != nil {
-					return fmt.Errorf("op [%d:%d]: invalid branch %s: %v", oh.Branch, err)
+					return fmt.Errorf("op [ ]: invalid branch %s: %v", oh.Branch.String(), err)
 				}
 				b.branches[br] = branch
 			}
@@ -536,7 +539,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 
 	// fetch baking and endorsing rights for this block
 	var rr []*models.Right
-	err := b.idx.statedb.Where("height = ？ and type = ?", b.block.Height, int64(chain.RightTypeBaking)).Find(&rr).Error
+	err := b.idx.statedb.Where("height = ? and type = ?", b.block.Height, int(chain.RightTypeBaking)).Find(&rr).Error
 	if err != nil {
 		return err
 	}
@@ -546,7 +549,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 
 	// endorsements are for block-1
 	var rrs []*models.Right
-	err = b.idx.statedb.Where("height = ？ and type = ?", b.block.Height-1, int64(chain.RightTypeEndorsing)).Find(&rrs).Error
+	err = b.idx.statedb.Where("height = ? and type = ?", b.block.Height-1, int64(chain.RightTypeEndorsing)).Find(&rrs).Error
 	if err != nil {
 		return err
 	}
@@ -707,6 +710,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 		// todo batch insert
 		tx := b.idx.statedb.Begin()
 		for _, acc := range newacc {
+			acc.RowId = models.AccountID(0)
 			if err := tx.Create(acc).Error; err != nil {
 				tx.Rollback()
 				return err
@@ -723,6 +727,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 }
 
 func (b *Builder) Decorate(ctx context.Context, rollback bool) error {
+	log.Debugf("start Decorate function")
 	// handle upgrades and end of cycle events right before processing the next block
 	if b.parent != nil {
 		// first step: handle deactivated delegates from parent block
@@ -1091,6 +1096,7 @@ func (b *Builder) UpdateStats(ctx context.Context) error {
 }
 
 func (b *Builder) RollbackStats(ctx context.Context) error {
+	log.Debugf("start RollbackStats function")
 	// init pre-funded state (at the end of block processing using current state)
 	for _, acc := range b.accMap {
 		acc.WasFunded = (acc.FrozenBalance() + acc.SpendableBalance) > 0
@@ -1218,23 +1224,23 @@ func (b *Builder) BuildGenesisBlock(ctx context.Context) (*models.Block, error) 
 		// prepare for insert
 		accounts = append(accounts, acc)
 
-		log.Debug(newLogClosure(func() string {
-			var as, vs, ds, rs string
-			if acc.IsActivated {
-				as = " [activated]"
-			}
-			if acc.IsVesting {
-				vs = " [vesting]"
-			}
-			if acc.IsDelegate {
-				ds = " [delegated]"
-			}
-			if acc.IsRevealed {
-				rs = " [revealed]"
-			}
-			return fmt.Sprintf("Registered %d %s %.6f%s%s%s%s", acc.RowId, acc,
-				b.block.Params.ConvertValue(acc.Balance()), as, ds, rs, vs)
-		}))
+		// log.Debug(newLogClosure(func() string {
+		// 	var as, vs, ds, rs string
+		// 	if acc.IsActivated {
+		// 		as = " [activated]"
+		// 	}
+		// 	if acc.IsVesting {
+		// 		vs = " [vesting]"
+		// 	}
+		// 	if acc.IsDelegate {
+		// 		ds = " [delegated]"
+		// 	}
+		// 	if acc.IsRevealed {
+		// 		rs = " [revealed]"
+		// 	}
+		// 	return fmt.Sprintf("Registered %d %s %.6f%s%s%s%s", acc.RowId, acc,
+		// 		b.block.Params.ConvertValue(acc.Balance()), as, ds, rs, vs)
+		// }))
 	}
 
 	// process KT1 vesting contracts
@@ -1289,23 +1295,23 @@ func (b *Builder) BuildGenesisBlock(ctx context.Context) (*models.Block, error) 
 		cc.Script, _ = v.Script.MarshalBinary()
 		contracts = append(contracts, cc)
 
-		log.Debug(newLogClosure(func() string {
-			var as, vs, ds, rs string
-			if acc.IsActivated {
-				as = " [activated]"
-			}
-			if acc.IsVesting {
-				vs = " [vesting]"
-			}
-			if acc.IsDelegate {
-				ds = " [delegated]"
-			}
-			if acc.IsRevealed {
-				rs = " [revealed]"
-			}
-			return fmt.Sprintf("Registered %d %s %.6f%s%s%s%s", acc.RowId, acc,
-				b.block.Params.ConvertValue(acc.Balance()), as, ds, rs, vs)
-		}))
+		// log.Debug(newLogClosure(func() string {
+		// 	var as, vs, ds, rs string
+		// 	if acc.IsActivated {
+		// 		as = " [activated]"
+		// 	}
+		// 	if acc.IsVesting {
+		// 		vs = " [vesting]"
+		// 	}
+		// 	if acc.IsDelegate {
+		// 		ds = " [delegated]"
+		// 	}
+		// 	if acc.IsRevealed {
+		// 		rs = " [revealed]"
+		// 	}
+		// 	return fmt.Sprintf("Registered %d %s %.6f%s%s%s%s", acc.RowId, acc,
+		// 		b.block.Params.ConvertValue(acc.Balance()), as, ds, rs, vs)
+		// }))
 	}
 
 	// process fundraiser accounts that must be activated by users
@@ -1331,24 +1337,30 @@ func (b *Builder) BuildGenesisBlock(ctx context.Context) (*models.Block, error) 
 
 	// insert accounts to create rows (later the indexer will update all accounts again,
 	// but we need to properly init the table row_id counter here)
+
 	// TODO batch insert
 	tx := b.idx.statedb.Begin()
 	for _, acc := range accounts {
 		if err := tx.Create(acc).Error; err != nil {
 			tx.Rollback()
+			log.Errorf("insert account error: %v", err)
 			return nil, err
 		}
 	}
 	tx.Commit()
 
-	tx = b.idx.statedb.Begin()
-	for _, contract := range contracts {
-		if err := tx.Create(contract).Error; err != nil {
-			tx.Rollback()
-			return nil, err
-		}
+	// tx = b.idx.statedb.Begin()
+	// for _, contract := range contracts {
+	// 	if err := tx.Create(contract).Error; err != nil {
+	// 		tx.Rollback()
+	// 		return nil, err
+	// 	}
+	// }
+	// tx.Commit()
+	if err := index.BatchInsertContracts(contracts, b.idx.statedb); err != nil {
+		log.Errorf("batch insert contracts error: %v", err)
+		return nil, err
 	}
-	tx.Commit()
 
 	// init chain and supply counters from block and flows
 	b.block.Chain.Update(b.block, b.dlgMap)
@@ -1371,6 +1383,46 @@ func (b *Builder) BuildGenesisBlock(ctx context.Context) (*models.Block, error) 
 	}
 
 	return b.block, nil
+}
+
+func BatchInsertAccounts(records []*models.Account, db *gorm.DB) error { // todo 不可用
+	if len(records) == 0 {
+		return nil
+	}
+	log.Debugf("start batch insert accounts; length = %d", len(records))
+	sql := "INSERT INTO `accounts` (`hash`, `delegate_id`, `manager_id`, `pubkey_hash`, `pubkey_type`, `address_type`, `first_in`, `first_out`, `last_in`," +
+		" `last_out`, `first_seen`,`last_seen`,`delegated_since`,`delegate_since`,`total_received`,`total_sent`,`total_burned`," +
+		" `total_fees_paid`,`total_rewards_earned`,`total_fees_earned`,`total_lost`,`frozen_deposits`,`frozen_rewards`," +
+		" `frozen_fees`,`unclaimed_balance`,`spendable_balance`,`delegated_balance`,`total_delegations`,`active_delegations`," +
+		" `is_funded`,`is_activated`,`is_vesting`,`is_spendable`,`is_delegatable`,`is_delegated`,`is_revealed`,`is_delegate`," +
+		" `is_active_delegate`,`is_contract`,`blocks_baked`, `blocks_missed`,`blocks_stolen`,`blocks_endorsed`,`slots_endorsed`," +
+		" `slots_missed`,`n_ops`,`n_ops_failed`,`n_tx`,`n_delegation`,`n_origination`,`n_proposal`,`n_ballot`,`token_gen_min`," +
+		" `token_gen_max`,`grace_period`) VALUES "
+	// 循环data数组,组合sql语句
+	for key, v := range records {
+		if len(records)-1 == key {
+			// 最后一条数据 以分号结尾
+			sql += fmt.Sprintf("('%s','%d','%d','%s','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%t','%t','%t','%t','%t','%t','%t','%t','%t','%t','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d');",
+				string(v.Hash), v.DelegateId, v.ManagerId, string(v.PubkeyHash), v.PubkeyType, v.Type, v.FirstIn, v.FirstOut, v.LastIn, v.LastOut,
+				v.FirstSeen, v.LastSeen, v.DelegatedSince, v.DelegateSince, v.TotalReceived, v.TotalSent, v.TotalBurned,
+				v.TotalFeesPaid, v.TotalRewardsEarned, v.TotalFeesEarned, v.TotalLost, v.FrozenDeposits, v.FrozenRewards, v.FrozenFees,
+				v.UnclaimedBalance, v.SpendableBalance, v.DelegatedBalance, v.TotalDelegations, v.ActiveDelegations, v.IsFunded, v.IsActivated,
+				v.IsVesting, v.IsSpendable, v.IsDelegatable, v.IsDelegated, v.IsRevealed, v.IsDelegate, v.IsActiveDelegate, v.IsContract,
+				v.BlocksBaked, v.BlocksMissed, v.BlocksStolen, v.BlocksEndorsed, v.SlotsEndorsed, v.SlotsMissed, v.NOps, v.NOpsFailed,
+				v.NTx, v.NDelegation, v.NOrigination, v.NProposal, v.NBallot, v.TokenGenMin, v.TokenGenMax, v.GracePeriod)
+		} else {
+			sql += fmt.Sprintf("('%s','%d','%d','%s','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%t','%t','%t','%t','%t','%t','%t','%t','%t','%t','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d'),",
+				string(v.Hash), v.DelegateId, v.ManagerId, string(v.PubkeyHash), v.PubkeyType, v.Type, v.FirstIn, v.FirstOut, v.LastIn, v.LastOut,
+				v.FirstSeen, v.LastSeen, v.DelegatedSince, v.DelegateSince, v.TotalReceived, v.TotalSent, v.TotalBurned,
+				v.TotalFeesPaid, v.TotalRewardsEarned, v.TotalFeesEarned, v.TotalLost, v.FrozenDeposits, v.FrozenRewards, v.FrozenFees,
+				v.UnclaimedBalance, v.SpendableBalance, v.DelegatedBalance, v.TotalDelegations, v.ActiveDelegations, v.IsFunded, v.IsActivated,
+				v.IsVesting, v.IsSpendable, v.IsDelegatable, v.IsDelegated, v.IsRevealed, v.IsDelegate, v.IsActiveDelegate, v.IsContract,
+				v.BlocksBaked, v.BlocksMissed, v.BlocksStolen, v.BlocksEndorsed, v.SlotsEndorsed, v.SlotsMissed, v.NOps, v.NOpsFailed,
+				v.NTx, v.NDelegation, v.NOrigination, v.NProposal, v.NBallot, v.TokenGenMin, v.TokenGenMax, v.GracePeriod)
+		}
+	}
+	err := db.Exec(sql).Error
+	return err
 }
 
 func (b *Builder) FixUpgradeBugs(ctx context.Context, prevparams, nextparams *chain.Params) error {

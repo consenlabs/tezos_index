@@ -9,7 +9,7 @@ import (
 
 var DB *gorm.DB
 
-func InitDB(dsn string) {
+func InitDB(dsn string) *gorm.DB {
 	log.Infof("数据库dsn: %s", dsn)
 	db, err := gorm.Open("mysql", dsn)
 	if err != nil {
@@ -26,6 +26,7 @@ func InitDB(dsn string) {
 	DB = db
 	autoCreateTable()
 	log.Infof("数据库连接成功")
+	return db
 }
 
 // autoCreateTable 自动建表

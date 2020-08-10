@@ -5,13 +5,13 @@ package puller
 
 import (
 	"context"
+	"github.com/zyjblockchain/sandy_log/log"
 	"sort"
 	"sync"
 	"tezos_index/chain"
+	model "tezos_index/puller/models"
 	util "tezos_index/utils"
 	"time"
-
-	model "tezos_index/puller/models"
 )
 
 const rankDefaultSize = 1 << 16

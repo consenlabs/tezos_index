@@ -7,6 +7,7 @@ import (
 	"context"
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
+	"github.com/zyjblockchain/sandy_log/log"
 	"sync"
 	"sync/atomic"
 	"tezos_index/chain"
@@ -15,8 +16,6 @@ import (
 )
 
 type IndexerConfig struct {
-	DBPath  string
-	DBOpts  interface{}
 	StateDB *gorm.DB
 	CacheDB *redis.Client
 	Indexes []BlockIndexer
@@ -38,8 +37,6 @@ type Indexer struct {
 
 func NewIndexer(cfg IndexerConfig) *Indexer {
 	return &Indexer{
-		dbpath:  cfg.DBPath,
-		dbopts:  cfg.DBOpts,
 		statedb: cfg.StateDB,
 		cachedb: cfg.CacheDB,
 		indexes: cfg.Indexes,

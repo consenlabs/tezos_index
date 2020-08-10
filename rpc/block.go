@@ -164,6 +164,7 @@ func (c *Client) GetTips(ctx context.Context, depth int, head chain.BlockHash) (
 func (c *Client) GetTipHeader(ctx context.Context) (*BlockHeader, error) {
 	var head BlockHeader
 	u := fmt.Sprintf("chains/%s/blocks/head/header", c.ChainID)
+	log.Debugf("rpc: getTipHeader: %s", u)
 	if err := c.Get(ctx, u, &head); err != nil {
 		return nil, err
 	}
