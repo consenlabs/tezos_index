@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// 全网的token 供应量info
 type Supply struct {
 	RowId               uint64    `gorm:"primary_key;column:row_id" json:"row_id"`                // unique id
 	Height              int64     `gorm:"column:height"    json:"height"`                         // bc: block height (also for orphans)

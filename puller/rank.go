@@ -139,7 +139,7 @@ func (m *Indexer) BuildAccountRanking(ctx context.Context, now time.Time) (*Acco
 
 	var ops []*model.Op
 	err = m.statedb.Select("row_id, sender_id, receiver_id, "+
-		"volume").Where("time >= ? and type = ? and is_success = ？",
+		"volume").Where("time >= ? and type = ? and is_success = ?",
 		now.Add(-24*time.Hour), int64(chain.OpTypeTransaction), true).Find(&ops).Error
 	if err != nil {
 		return nil, err

@@ -113,10 +113,10 @@ func (m *Indexer) ConnectProtocol(ctx context.Context, params *chain.Params) err
 		if err := dbStoreDeployment(m.cachedb, prev); err != nil {
 			return err
 		}
-	} else {
-		if err := dbStoreDeployment(m.cachedb, params); err != nil {
-			return err
-		}
+	}
+	// save new params
+	if err := dbStoreDeployment(m.cachedb, params); err != nil {
+		return err
 	}
 
 	return m.reg.Register(params)

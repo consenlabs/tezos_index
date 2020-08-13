@@ -846,6 +846,9 @@ func (b *Builder) Decorate(ctx context.Context, rollback bool) error {
 				// identify lower prio bakers from rights table and update BlocksMissed
 				// assuming the rights list is sorted by priority
 				for i := 0; i < b.block.Priority; i++ {
+					if len(b.baking) <= i {
+						break
+					}
 					id := b.baking[i].AccountId
 					missed, ok := b.AccountById(id)
 					if !ok {
@@ -1349,18 +1352,19 @@ func (b *Builder) BuildGenesisBlock(ctx context.Context) (*models.Block, error) 
 	}
 	tx.Commit()
 
-	// tx = b.idx.statedb.Begin()
-	// for _, contract := range contracts {
-	// 	if err := tx.Create(contract).Error; err != nil {
-	// 		tx.Rollback()
-	// 		return nil, err
-	// 	}
-	// }
-	// tx.Commit()
-	if err := index.BatchInsertContracts(contracts, b.idx.statedb); err != nil {
-		log.Errorf("batch insert contracts error: %v", err)
-		return nil, err
+	tx = b.idx.statedb.Begin()
+	for _, contract := range contracts {
+		if err := tx.Create(contract).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
 	}
+	tx.Commit()
+
+	// if err := index.BatchInsertContracts(contracts, b.idx.statedb); err != nil {
+	// 	log.Errorf("batch insert contracts error: %v", err)
+	// 	return nil, err
+	// }
 
 	// init chain and supply counters from block and flows
 	b.block.Chain.Update(b.block, b.dlgMap)

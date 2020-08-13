@@ -159,19 +159,19 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 		ins = append(ins, r)
 	}
 
-	// // todo batch insert
-	// tx = idx.DB().Begin()
-	// for _, v := range ins {
-	// 	if err := tx.Create(v).Error; err != nil {
-	// 		tx.Rollback()
-	// 		return err
-	// 	}
-	// }
-	// tx.Commit()
-	if err := batchInsertRights(ins, idx.DB()); err != nil {
-		log.Errorf("batch insert rights error: %v", err)
-		return err
+	// todo batch insert
+	tx = idx.DB().Begin()
+	for _, v := range ins {
+		if err := tx.Create(v).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
+	tx.Commit()
+	// if err := batchInsertRights(ins, idx.DB()); err != nil {
+	// 	log.Errorf("batch insert rights error: %v", err)
+	// 	return err
+	// }
 	return nil
 }
 

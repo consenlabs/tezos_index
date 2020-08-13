@@ -28,7 +28,7 @@ type Contract struct {
 	StorageLimit  int64     `gorm:"column:storage_limit"      json:"storage_limit"`
 	StorageSize   int64     `gorm:"column:storage_size"      json:"storage_size"`
 	StoragePaid   int64     `gorm:"column:storage_paid"      json:"storage_paid"`
-	Script        []byte    `gorm:"column:script"      json:"script"`
+	Script        []byte    `gorm:"column:script;type:BLOB"      json:"script"`
 	IsSpendable   bool      `gorm:"column:is_spendable"      json:"is_spendable"`     // manager can move funds without running any code
 	IsDelegatable bool      `gorm:"column:is_delegatable"      json:"is_delegatable"` // manager can delegate funds
 }

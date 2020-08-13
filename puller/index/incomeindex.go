@@ -395,7 +395,7 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 	}
 	// load endorse rights for last block of previous cycle
 	var rights []*models.Right
-	err := idx.DB().Where("height = ? and type = ？", endorseStartBlock, int64(chain.RightTypeEndorsing)).Find(&rights).Error
+	err := idx.DB().Where("height = ? and type = ?", endorseStartBlock, int64(chain.RightTypeEndorsing)).Find(&rights).Error
 	if err != nil {
 		return err
 	}

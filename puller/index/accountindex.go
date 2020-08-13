@@ -5,6 +5,7 @@ package index
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/puller/models"
@@ -47,14 +48,82 @@ func (idx *AccountIndex) ConnectBlock(ctx context.Context, block *models.Block, 
 			upd = append(upd, acc)
 		}
 	}
+
 	// todo batch update
+	tx := idx.db.Begin()
 	for _, upAcc := range upd {
-		if err := idx.DB().Model(&models.Account{}).Updates(upAcc).Error; err != nil {
+		if err := UpdateAccount(upAcc, tx); err != nil {
 			log.Errorf("update account record error: %v; upAccount: %v", err, upAcc)
+			tx.Rollback()
 			return err
 		}
 	}
+	tx.Commit()
 	return nil
+}
+
+func UpdateAccount(acc *models.Account, db *gorm.DB) error {
+	if acc.RowId.Value() == 0 {
+		return errors.New(fmt.Sprintf("This record (hash: %s) has not row_id,cannot update record ", acc.String()))
+	}
+	data := make(map[string]interface{})
+	data["hash"] = acc.Hash
+	data["delegate_id"] = acc.DelegateId
+	data["manager_id"] = acc.ManagerId
+	data["pubkey_hash"] = acc.PubkeyHash
+	data["pubkey_type"] = acc.PubkeyType
+	data["address_type"] = acc.Type
+	data["first_in"] = acc.FirstIn
+	data["first_out"] = acc.FirstOut
+	data["last_in"] = acc.LastIn
+	data["last_out"] = acc.LastOut
+	data["first_seen"] = acc.FirstSeen
+	data["last_seen"] = acc.LastSeen
+	data["delegated_since"] = acc.DelegatedSince
+	data["delegate_since"] = acc.DelegateSince
+	data["total_received"] = acc.TotalReceived
+	data["total_sent"] = acc.TotalSent
+	data["total_burned"] = acc.TotalBurned
+	data["total_fees_paid"] = acc.TotalFeesPaid
+	data["total_rewards_earned"] = acc.TotalRewardsEarned
+	data["total_fees_earned"] = acc.TotalFeesEarned
+	data["total_lost"] = acc.TotalLost
+	data["frozen_deposits"] = acc.FrozenDeposits
+	data["frozen_rewards"] = acc.FrozenRewards
+	data["frozen_fees"] = acc.FrozenFees
+	data["unclaimed_balance"] = acc.UnclaimedBalance
+	data["spendable_balance"] = acc.SpendableBalance
+	data["delegated_balance"] = acc.DelegatedBalance
+	data["total_delegations"] = acc.TotalDelegations
+	data["active_delegations"] = acc.ActiveDelegations
+	data["is_funded"] = acc.IsFunded
+	data["is_activated"] = acc.IsActivated
+	data["is_vesting"] = acc.IsVesting
+	data["is_spendable"] = acc.IsSpendable
+	data["is_delegatable"] = acc.IsDelegatable
+	data["is_delegated"] = acc.IsDelegated
+	data["is_revealed"] = acc.IsRevealed
+	data["is_delegate"] = acc.IsDelegate
+	data["is_active_delegate"] = acc.IsActiveDelegate
+	data["is_contract"] = acc.IsContract
+	data["blocks_baked"] = acc.BlocksBaked
+	data["blocks_missed"] = acc.BlocksMissed
+	data["blocks_stolen"] = acc.BlocksStolen
+	data["blocks_endorsed"] = acc.BlocksEndorsed
+	data["slots_endorsed"] = acc.SlotsEndorsed
+	data["slots_missed"] = acc.SlotsMissed
+	data["n_ops"] = acc.NOps
+	data["n_ops_failed"] = acc.NOpsFailed
+	data["n_tx"] = acc.NTx
+	data["n_delegation"] = acc.NDelegation
+	data["n_origination"] = acc.NOrigination
+	data["n_proposal"] = acc.NProposal
+	data["n_ballot"] = acc.NBallot
+	data["token_gen_min"] = acc.TokenGenMin
+	data["token_gen_max"] = acc.TokenGenMax
+	data["grace_period"] = acc.GracePeriod
+
+	return db.Model(&models.Account{}).Where("row_id = ?", acc.RowId.Value()).Updates(data).Error
 }
 
 func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
