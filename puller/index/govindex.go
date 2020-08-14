@@ -188,7 +188,7 @@ func (idx *GovIndex) closeElection(ctx context.Context, block *models.Block, bui
 	election.NoQuorum = vote.NoQuorum
 	election.NoMajority = vote.NoMajority
 
-	return idx.DB().Model(&models.Election{}).Updates(election).Error
+	return models.UpdateElection(election, idx.DB())
 }
 
 func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
@@ -259,7 +259,7 @@ func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder 
 	}
 
 	// update election
-	return idx.DB().Model(&models.Election{}).Updates(election).Error
+	return models.UpdateElection(election, idx.DB())
 }
 
 func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder models.BlockBuilder) (bool, error) {
@@ -311,7 +311,7 @@ func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder
 				}
 				// store winner and update election
 				election.ProposalId = winner
-				if err := idx.DB().Model(&models.Election{}).Updates(election).Error; err != nil {
+				if err := models.UpdateElection(election, idx.DB()); err != nil {
 					return false, err
 				}
 				vote.ProposalId = winner
@@ -334,11 +334,25 @@ func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder
 	vote.EndTime = block.Timestamp
 	vote.IsOpen = false
 
-	if err := idx.DB().Model(&models.Vote{}).Updates(vote).Error; err != nil {
+	if err := updateThisVote(vote, idx.DB()); err != nil {
 		return false, err
 	}
 
 	return !vote.IsFailed, nil
+}
+
+func updateThisVote(v *models.Vote, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["proposal_id"] = v.ProposalId
+	data["no_proposal"] = v.NoProposal
+	data["no_quorum"] = v.NoQuorum
+	data["is_draw"] = v.IsDraw
+	data["is_failed"] = v.IsFailed
+	data["no_majority"] = v.NoMajority
+	data["period_end_time"] = v.EndTime
+	data["is_open"] = v.IsOpen
+
+	return db.Model(&models.Vote{}).Where("row_id = ?", v.RowId).Updates(data).Error
 }
 
 func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
@@ -424,7 +438,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 		}
 		election.IsEmpty = false
 		election.NumProposals += len(insProposals)
-		if err := idx.DB().Model(&models.Election{}).Updates(election).Error; err != nil {
+		if err := models.UpdateElection(election, idx.db); err != nil {
 			return err
 		}
 	}
@@ -519,7 +533,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 
 	// finalize vote for this round and safe
 	vote.TurnoutPct = vote.TurnoutRolls * 10000 / vote.EligibleRolls
-	if err := idx.DB().Model(&models.Vote{}).Updates(vote).Error; err != nil {
+	if err := updateThisVot(vote, idx.DB()); err != nil {
 		return err
 	}
 
@@ -531,7 +545,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 	//  todo batch update
 	tx := idx.DB().Begin()
 	for _, v := range insProposals {
-		if err := tx.Model(&models.Proposal{}).Updates(v).Error; err != nil {
+		if err := models.UpdateProposal(v, tx); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -539,6 +553,17 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 	tx.Commit()
 
 	return idx.DB().Create(insBallots).Error
+}
+
+func updateThisVot(v *models.Vote, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["turnout_rolls"] = v.TurnoutRolls
+	data["turnout_voters"] = v.TurnoutVoters
+	data["eligible_rolls"] = v.EligibleRolls
+	data["eligible_voters"] = v.EligibleVoters
+	data["quorum_pct"] = v.QuorumPct
+	data["turnout_pct"] = v.TurnoutPct
+	return db.Model(&models.Vote{}).Where("row_id = ?", v.RowId).Updates(data).Error
 }
 
 func (idx *GovIndex) processBallots(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
@@ -620,11 +645,28 @@ func (idx *GovIndex) processBallots(ctx context.Context, block *models.Block, bu
 
 	// finalize vote for this round and safe
 	vote.TurnoutPct = vote.TurnoutRolls * 10000 / vote.EligibleRolls
-	if err := idx.DB().Model(&models.Vote{}).Updates(vote).Error; err != nil {
+	if err := updateTheVot(vote, idx.db); err != nil {
 		return err
 	}
 
 	return idx.DB().Create(insBallots).Error
+}
+
+func updateTheVot(v *models.Vote, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["turnout_rolls"] = v.TurnoutRolls
+	data["turnout_voters"] = v.TurnoutVoters
+	data["yay_rolls"] = v.YayRolls
+	data["yay_voters"] = v.YayVoters
+	data["nay_rolls"] = v.NayRolls
+	data["nay_voters"] = v.NayVoters
+	data["pass_rolls"] = v.PassRolls
+	data["pass_voters"] = v.PassVoters
+	data["eligible_rolls"] = v.EligibleRolls
+	data["eligible_voters"] = v.EligibleVoters
+	data["quorum_pct"] = v.QuorumPct
+	data["turnout_pct"] = v.TurnoutPct
+	return db.Model(&models.Vote{}).Where("row_id = ?", v.RowId).Updates(data).Error
 }
 
 func (idx *GovIndex) electionByHeight(ctx context.Context, height int64, params *chain.Params) (*models.Election, error) {

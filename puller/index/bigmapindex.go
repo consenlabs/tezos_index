@@ -270,7 +270,7 @@ func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64) error {
 		// todo batch update
 		tx := idx.DB().Begin()
 		for _, val := range upd {
-			err := idx.DB().Model(&models.BigMapItem{}).Updates(val).Error
+			err := models.UpdatesBigMapItem(val, tx)
 			if err != nil {
 				tx.Rollback()
 				return err

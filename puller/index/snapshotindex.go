@@ -191,7 +191,7 @@ func (idx *SnapshotIndex) UpdateCycleSnapshot(ctx context.Context, block *models
 	// todo batch update
 	tx := idx.DB().Begin()
 	for _, row := range rows {
-		if err := tx.Model(&models.Snapshot{}).Updates(row).Error; err != nil {
+		if err := updateThisSnapshot(row, tx); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -202,4 +202,10 @@ func (idx *SnapshotIndex) UpdateCycleSnapshot(ctx context.Context, block *models
 	// if this becomes a problem
 
 	return nil
+}
+
+func updateThisSnapshot(s *models.Snapshot, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["is_selected"] = s.IsSelected
+	return db.Model(&models.Snapshot{}).Where("row_id = ?", s.RowId).Updates(data).Error
 }

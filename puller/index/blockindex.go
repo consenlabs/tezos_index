@@ -46,7 +46,7 @@ func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b 
 	// update parent block to write blocks endorsed bitmap
 	if block.Parent != nil && block.Parent.Height > 0 {
 		// 更新 parent block after build
-		if err := idx.DB().Model(&models.Block{}).Updates(block.Parent).Error; err != nil {
+		if err := models.UpdateBlock(block.Parent, idx.DB()); err != nil {
 			return fmt.Errorf("parent update: %v", err)
 		}
 	}
@@ -68,7 +68,7 @@ func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b 
 
 		snapBlock.IsCycleSnapshot = true
 
-		if err := idx.DB().Model(&models.Block{}).Updates(snapBlock).Error; err != nil {
+		if err := idx.DB().Model(snapBlock).Update("is_cycle_snapshot", true).Error; err != nil {
 			return fmt.Errorf("snapshot index block %d: %v", snapHeight, err)
 		}
 	}
@@ -80,7 +80,7 @@ func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b 
 
 func (idx *BlockIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
 	// parent update will be done on next connect
-	return idx.DB().Model(&models.Block{}).Updates(block).Error
+	return models.UpdateBlock(block, idx.db)
 }
 
 func (idx *BlockIndex) DeleteBlock(ctx context.Context, height int64) error {

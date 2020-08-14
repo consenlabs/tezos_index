@@ -99,7 +99,7 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 	// todo batch update
 	tx := idx.DB().Begin()
 	for _, up := range upd {
-		if err := tx.Model(&models.Right{}).Updates(up).Error; err != nil {
+		if err := models.UpdateRight(up, tx); err != nil {
 			tx.Rollback()
 			return err
 		}
@@ -253,7 +253,7 @@ func (idx *RightsIndex) DisconnectBlock(ctx context.Context, block *models.Block
 	// todo batch update
 	tx := idx.DB().Begin()
 	for _, val := range upd {
-		if err := tx.Model(&models.Right{}).Updates(val).Error; err != nil {
+		if err := models.UpdateRight(val, tx); err != nil {
 			tx.Rollback()
 			return err
 		}

@@ -63,7 +63,7 @@ func (idx *AccountIndex) ConnectBlock(ctx context.Context, block *models.Block, 
 }
 
 func UpdateAccount(acc *models.Account, db *gorm.DB) error {
-	if acc.RowId.Value() == 0 {
+	if acc.RowId.Value() <= 0 {
 		return errors.New(fmt.Sprintf("This record (hash: %s) has not row_id,cannot update record ", acc.String()))
 	}
 	data := make(map[string]interface{})
@@ -167,7 +167,7 @@ func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Bloc
 
 	// todo batch update
 	for _, upAcc := range upd {
-		if err := idx.DB().Model(&models.Account{}).Updates(upAcc).Error; err != nil {
+		if err := UpdateAccount(upAcc, idx.db); err != nil {
 			log.Errorf("update account record error: %v; upAccount: %v", err, upAcc)
 			return err
 		}

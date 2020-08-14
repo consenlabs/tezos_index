@@ -4,6 +4,7 @@
 package models
 
 import (
+	"github.com/jinzhu/gorm"
 	"tezos_index/chain"
 	"time"
 )
@@ -36,6 +37,25 @@ type Election struct {
 	NoMajority   bool       `gorm:"column:no_majority"      json:"no_majority"`     // flag, supermajority not reached
 }
 
+func UpdateElection(up *Election, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["proposal_id"] = up.ProposalId
+	data["num_periods"] = up.NumPeriods
+	data["num_proposals"] = up.NumProposals
+	data["voting_perid"] = up.VotingPeriod
+	data["start_time"] = up.StartTime
+	data["end_time"] = up.EndTime
+	data["start_height"] = up.StartHeight
+	data["end_height"] = up.EndHeight
+	data["is_empty"] = up.IsEmpty
+	data["is_open"] = up.IsOpen
+	data["is_failed"] = up.IsFailed
+	data["no_quorum"] = up.NoQuorum
+	data["no_majority"] = up.NoMajority
+
+	return db.Model(&Election{}).Where("row_id = ?", up.RowId).Updates(data).Error
+}
+
 func (e *Election) ID() uint64 {
 	return uint64(e.RowId)
 }
@@ -63,6 +83,20 @@ type Proposal struct {
 	VotingPeriod int64          `gorm:"column:voting_period"      json:"voting_period"` // protocol: proposal period sequence number
 	Rolls        int64          `gorm:"column:rolls"      json:"rolls"`                 // number of rolls accumulated by this proposal
 	Voters       int64          `gorm:"column:voters"      json:"voters"`               // number of voters who voted for this proposal
+}
+
+func UpdateProposal(p *Proposal, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["hash"] = p.Hash
+	data["height"] = p.Height
+	data["time"] = p.Time
+	data["source_id"] = p.SourceId
+	data["op_id"] = p.OpId
+	data["election_id"] = p.ElectionId
+	data["voting_period"] = p.VotingPeriod
+	data["rolls"] = p.Rolls
+	data["voters"] = p.Voters
+	return db.Model(&Proposal{}).Where("row_id = ?", p.RowId).Updates(data).Error
 }
 
 func (p *Proposal) ID() uint64 {

@@ -4,6 +4,9 @@
 package models
 
 import (
+	"errors"
+	"fmt"
+	"github.com/jinzhu/gorm"
 	"sync"
 	"tezos_index/chain"
 	"tezos_index/micheline"
@@ -35,6 +38,34 @@ type BigMapItem struct {
 	Counter     int64                      `gorm:"column:counter"      json:"-"`                 // running update counter
 	NKeys       int64                      `gorm:"column:n_keys"      json:"-"`                  // current number of active keys
 	Updated     int64                      `gorm:"column:updated"      json:"-"`                 // height at which this entry was replaced
+}
+
+func UpdatesBigMapItem(upBigMap *BigMapItem, db *gorm.DB) error {
+	if upBigMap.RowId <= 0 {
+		return errors.New(fmt.Sprintf("Cannot update withnot row_id record; record:%v", *upBigMap))
+	}
+	data := make(map[string]interface{})
+	data["prev_id"] = upBigMap.PrevId
+	data["account_id"] = upBigMap.AccountId
+	data["contract_id"] = upBigMap.ContractId
+	data["op_id"] = upBigMap.OpId
+	data["height"] = upBigMap.Height
+	data["time"] = upBigMap.Timestamp
+	data["bigmap_id"] = upBigMap.BigMapId
+	data["action"] = upBigMap.Action
+	data["key_hash"] = upBigMap.KeyHash
+	data["key_encoding"] = upBigMap.KeyEncoding
+	data["key_type"] = upBigMap.KeyType
+	data["key"] = upBigMap.Key
+	data["value"] = upBigMap.Value
+	data["is_replaced"] = upBigMap.IsReplaced
+	data["is_deleted"] = upBigMap.IsDeleted
+	data["is_copied"] = upBigMap.IsCopied
+	data["counter"] = upBigMap.Counter
+	data["n_keys"] = upBigMap.NKeys
+	data["updated"] = upBigMap.Updated
+
+	return db.Model(&BigMapItem{}).Where("row_id = ?", upBigMap.RowId).Updates(data).Error
 }
 
 func (m *BigMapItem) ID() uint64 {

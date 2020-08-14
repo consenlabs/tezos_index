@@ -274,7 +274,7 @@ func (idx *IncomeIndex) UpdateCycleIncome(ctx context.Context, block *models.Blo
 		// todo batch update
 		tx := idx.DB().Begin()
 		for _, v := range upd {
-			if err := tx.Model(&models.Income{}).Updates(v).Error; err != nil {
+			if err := updateThisInc(v, tx); err != nil {
 				tx.Rollback()
 				return err
 			}
@@ -282,6 +282,16 @@ func (idx *IncomeIndex) UpdateCycleIncome(ctx context.Context, block *models.Blo
 		tx.Commit()
 	}
 	return nil
+}
+
+func updateThisInc(upc *models.Income, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["expected_income"] = upc.ExpectedIncome
+	data["expected_bonds"] = upc.ExpectedBonds
+	data["luck"] = upc.Luck
+	data["luck_percent"] = upc.LuckPct
+
+	return db.Model(&models.Income{}).Where("row_id = ?", upc.RowId).Updates(data).Error
 }
 
 func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
@@ -699,13 +709,57 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 	// todo batch update
 	tx := idx.DB().Begin()
 	for _, v := range upd {
-		if err := tx.Model(&models.Income{}).Updates(v).Error; err != nil {
+		if err := updateIncome(v, tx); err != nil {
 			tx.Rollback()
 			return err
 		}
 	}
 	tx.Commit()
 	return nil
+}
+
+// updateIncome
+func updateIncome(inc *models.Income, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["cycle"] = inc.Cycle
+	data["account_id"] = inc.AccountId
+	data["rolls"] = inc.Rolls
+	data["balance"] = inc.Balance
+	data["delegated"] = inc.Delegated
+	data["n_delegations"] = inc.NDelegations
+	data["n_baking_rights"] = inc.NBakingRights
+	data["n_endorsing_rights"] = inc.NEndorsingRights
+	data["luck"] = inc.Luck
+	data["luck_percent"] = inc.LuckPct
+	data["contribution_percent"] = inc.ContributionPct
+	data["performance_percent"] = inc.PerformancePct
+	data["n_blocks_baked"] = inc.NBlocksBaked
+	data["n_blocks_lost"] = inc.NBlocksLost
+	data["n_blocks_stolen"] = inc.NBlocksStolen
+	data["n_slots_endorsed"] = inc.NSlotsEndorsed
+	data["n_slots_missed"] = inc.NSlotsMissed
+	data["n_seeds_revealed"] = inc.NSeedsRevealed
+	data["expected_income"] = inc.ExpectedIncome
+	data["expected_bonds"] = inc.ExpectedBonds
+	data["total_income"] = inc.TotalIncome
+	data["total_bonds"] = inc.TotalBonds
+	data["baking_income"] = inc.BakingIncome
+	data["endorsing_income"] = inc.EndorsingIncome
+	data["double_baking_income"] = inc.DoubleBakingIncome
+	data["double_endorsing_income"] = inc.DoubleEndorsingIncome
+	data["seed_income"] = inc.SeedIncome
+	data["fees_income"] = inc.FeesIncome
+	data["missed_baking_income"] = inc.MissedBakingIncome
+	data["missed_endorsing_income"] = inc.MissedEndorsingIncome
+	data["stolen_baking_income"] = inc.StolenBakingIncome
+	data["total_lost"] = inc.TotalLost
+	data["lost_accusation_fees"] = inc.LostAccusationFees
+	data["lost_accusation_rewards"] = inc.LostAccusationRewards
+	data["lost_accusation_deposits"] = inc.LostAccusationDeposits
+	data["lost_revelation_fees"] = inc.LostRevelationFees
+	data["lost_revelation_rewards"] = inc.LostRevelationRewards
+
+	return db.Model(&models.Income{}).Where("row_id = ?", inc.RowId).Updates(data).Error
 }
 
 func (idx *IncomeIndex) UpdateNonceRevelations(ctx context.Context, block *models.Block, builder models.BlockBuilder, isRollback bool) error {
@@ -769,13 +823,24 @@ func (idx *IncomeIndex) UpdateNonceRevelations(ctx context.Context, block *model
 	// todo batch update
 	tx := idx.DB().Begin()
 	for _, v := range upd {
-		if err := tx.Model(&models.Income{}).Updates(v).Error; err != nil {
+		if err := updateThisIncome(v, tx); err != nil {
 			tx.Rollback()
 			return err
 		}
 	}
 	tx.Commit()
 	return nil
+}
+
+func updateThisIncome(inc *models.Income, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["total_lost"] = inc.TotalLost
+	data["lost_revelation_rewards"] = inc.LostRevelationRewards
+	data["lost_revelation_fees"] = inc.LostRevelationFees
+	data["performance_percent"] = inc.PerformancePct
+	data["contribution_percent"] = inc.ContributionPct
+
+	return db.Model(&models.Income{}).Where("row_id = ?", inc.RowId).Updates(data).Error
 }
 
 func (idx *IncomeIndex) DeleteCycle(ctx context.Context, cycle int64) error {

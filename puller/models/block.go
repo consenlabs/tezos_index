@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/jinzhu/gorm"
 	"math/bits"
 	"sync"
 	"tezos_index/chain"
@@ -94,6 +95,64 @@ type Block struct {
 	Flows  []*Flow       `gorm:"-" json:"-"`
 	Baker  *Account      `gorm:"-" json:"-"`
 	Parent *Block        `gorm:"-" json:"-"`
+}
+
+func UpdateBlock(b *Block, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["parent_id"] = b.ParentId
+	data["hash"] = b.Hash
+	data["is_orphan"] = b.IsOrphan
+	data["height"] = b.Height
+	data["cycle"] = b.Cycle
+	data["is_cycle_snapshot"] = b.IsCycleSnapshot
+	data["time"] = b.Timestamp
+	data["solvetime"] = b.Solvetime
+	data["version"] = b.Version
+	data["validation_pass"] = b.Validation
+	data["fitness"] = b.Fitness
+	data["priority"] = b.Priority
+	data["nonce"] = b.Nonce
+	data["voting_period_kind"] = b.VotingPeriodKind
+	data["baker_id"] = b.BakerId
+	data["endorsed_slots"] = b.SlotsEndorsed
+	data["n_endorsed_slots"] = b.NSlotsEndorsed
+	data["n_ops"] = b.NOps
+	data["n_ops_failed"] = b.NOpsFailed
+	data["n_ops_contract"] = b.NOpsContract
+	data["n_tx"] = b.NTx
+	data["n_activation"] = b.NActivation
+	data["n_seed_nonce_revelation"] = b.NSeedNonce
+	data["n_double_baking_evidence"] = b.N2Baking
+	data["n_double_endorsement_evidence"] = b.N2Endorsement
+	data["n_endorsement"] = b.NEndorsement
+	data["n_delegation"] = b.NDelegation
+	data["n_reveal"] = b.NReveal
+	data["n_origination"] = b.NOrigination
+	data["n_proposal"] = b.NProposal
+	data["n_ballot"] = b.NBallot
+	data["volume"] = b.Volume
+	data["fees"] = b.Fees
+	data["rewards"] = b.Rewards
+	data["deposits"] = b.Deposits
+	data["unfrozen_fees"] = b.UnfrozenFees
+	data["unfrozen_rewards"] = b.UnfrozenRewards
+	data["unfrozen_deposits"] = b.UnfrozenDeposits
+	data["activated_supply"] = b.ActivatedSupply
+	data["burned_supply"] = b.BurnedSupply
+	data["n_accounts"] = b.SeenAccounts
+	data["n_new_accounts"] = b.NewAccounts
+	data["n_new_implicit"] = b.NewImplicitAccounts
+	data["n_new_managed"] = b.NewManagedAccounts
+	data["n_new_contracts"] = b.NewContracts
+	data["n_cleared_accounts"] = b.ClearedAccounts
+	data["n_funded_accounts"] = b.FundedAccounts
+	data["gas_limit"] = b.GasLimit
+	data["gas_used"] = b.GasUsed
+	data["gas_price"] = b.GasPrice
+	data["storage_size"] = b.StorageSize
+	data["days_destroyed"] = b.TDD
+
+	return db.Model(&Block{}).Where("row_id = ?", b.RowId).Updates(data).Error
 }
 
 func (b Block) ID() uint64 {

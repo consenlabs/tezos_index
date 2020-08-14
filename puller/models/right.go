@@ -4,6 +4,7 @@
 package models
 
 import (
+	"github.com/jinzhu/gorm"
 	"sync"
 	"tezos_index/chain"
 )
@@ -24,6 +25,22 @@ type Right struct {
 	IsMissed       bool            `gorm:"column:is_missed"      json:"is_missed"`               // owner missed using this endorsement right
 	IsSeedRequired bool            `gorm:"column:is_seed_required"      json:"is_seed_required"` // seed nonce must be revealed (height%32==0)
 	IsSeedRevealed bool            `gorm:"column:is_seed_revealed"      json:"is_seed_revealed"` // seed nonce has been revealed in next cycle
+}
+
+func UpdateRight(r *Right, db *gorm.DB) error {
+	data := make(map[string]interface{})
+	data["type"] = r.Type
+	data["height"] = r.Height
+	data["cycle"] = r.Cycle
+	data["priority"] = r.Priority
+	data["account_id"] = r.AccountId
+	data["is_lost"] = r.IsLost
+	data["is_stolen"] = r.IsStolen
+	data["is_missed"] = r.IsMissed
+	data["is_seed_required"] = r.IsSeedRequired
+	data["is_seed_revealed"] = r.IsSeedRevealed
+
+	return db.Model(&Right{}).Where("row_id = ?", r.RowId).Updates(data).Error
 }
 
 func (r *Right) ID() uint64 {
