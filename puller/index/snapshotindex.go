@@ -143,6 +143,7 @@ func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block,
 
 	// todo batch insert
 	tx = idx.DB().Begin()
+	log.Infof("start insert snapshot index; record num: %d", len(ins))
 	for _, in := range ins {
 		if err := tx.Create(in).Error; err != nil {
 			tx.Rollback()
@@ -177,7 +178,7 @@ func (idx *SnapshotIndex) UpdateCycleSnapshot(ctx context.Context, block *models
 	rows := make([]*models.Snapshot, 0, 1024)
 
 	var ss []*models.Snapshot
-	err := idx.DB().Where("cycle = ? and index = ?", snap.Cycle-(block.Params.PreservedCycles+2), snap.RollSnapshot).Find(&ss).Error
+	err := idx.DB().Where("cycle = ? and s_index = ?", snap.Cycle-(block.Params.PreservedCycles+2), snap.RollSnapshot).Find(&ss).Error
 	if err != nil {
 		return err
 	}

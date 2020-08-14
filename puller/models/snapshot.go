@@ -19,7 +19,7 @@ type Snapshot struct {
 	Cycle        int64     `gorm:"column:cycle"    json:"cycle"`
 	IsSelected   bool      `gorm:"column:is_selected"    json:"is_selected"`
 	Timestamp    time.Time `gorm:"column:time"    json:"time"`
-	Index        int64     `gorm:"column:index"    json:"index"`
+	Index        int64     `gorm:"column:s_index"    json:"index"`
 	Rolls        int64     `gorm:"column:rolls"   json:"rolls"`
 	AccountId    AccountID `gorm:"column:account_id"    json:"account_id"`
 	DelegateId   AccountID `gorm:"column:delegate_id"   json:"delegate_id"`

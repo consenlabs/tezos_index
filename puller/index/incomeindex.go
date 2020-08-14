@@ -320,7 +320,7 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 		// FIXME: params should come from the future cycle
 		// p := builder.Registry().GetParamsByHeight(block.Params.CycleStartHeight(sn.Cycle))
 		var ss []*models.Snapshot
-		err := idx.DB().Where("cycle = ? and index = ? and is_active = ?",
+		err := idx.DB().Where("cycle = ? and s_index = ? and is_active = ?",
 			sn.Cycle-(p.PreservedCycles+2), sn.RollSnapshot, true).Find(&ss).Error
 		if err != nil {
 			return err

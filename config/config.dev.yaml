@@ -78,8 +78,8 @@ polkadot:
 tezos:
     mysql: root:WcGsHDMBmcv7mc#QWkuR@tcp(127.0.0.1:3306)/tezos_index?charset=utf8mb4&parseTime=True&loc=Local
     redis: 127.0.0.1:6379
-    chain: http://127.0.0.1:8732
-#    chain: https://mainnet-tezos.giganode.io
-#    proxy: http://127.0.0.1:8001
+#    chain: http://127.0.0.1:8732
+    chain: https://mainnet-tezos.giganode.io
+    proxy: http://127.0.0.1:8001
     network: mainnet
     port: 9000
