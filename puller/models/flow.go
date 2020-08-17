@@ -38,24 +38,24 @@ var flowPool = &sync.Pool{
 // flows for each freezer category, one out-flow and a second in-flow to the balance category.
 
 type Flow struct {
-	RowId       uint64            `gorm:"primary_key;column:row_id"   json:"row_id"`      // internal: id, not height!
-	Height      int64             `gorm:"column:height"      json:"height"`               // bc: block height (also for orphans)
-	Cycle       int64             `gorm:"column:cycle"      json:"cycle"`                 // bc: block cycle (tezos specific)
-	Timestamp   time.Time         `gorm:"column:time"      json:"time"`                   // bc: block creation time
-	AccountId   AccountID         `gorm:"column:account_id"      json:"account_id"`       // unique account id
-	OriginId    AccountID         `gorm:"column:origin_id"      json:"origin_id"`         // origin account that initiated the flow
-	AddressType chain.AddressType `gorm:"column:address_type"      json:"address_type"`   // address type, usable as filter
-	Category    FlowCategory      `gorm:"column:category"      json:"category"`           // sub-account that received the update
-	Operation   FlowType          `gorm:"column:operation"      json:"operation"`         // op type that caused this update
-	AmountIn    int64             `gorm:"column:amount_in"      json:"amount_in"`         // sum flowing in to the account
-	AmountOut   int64             `gorm:"column:amount_out"      json:"amount_out"`       // sum flowing out of the account
-	IsFee       bool              `gorm:"column:is_fee"      json:"is_fee"`               // flag to indicate this out-flow paid a fee
-	IsBurned    bool              `gorm:"column:is_burned"      json:"is_burned"`         // flag to indicate this out-flow was burned
-	IsFrozen    bool              `gorm:"column:is_frozen"      json:"is_frozen"`         // flag to indicate this in-flow is frozen
-	IsUnfrozen  bool              `gorm:"column:is_unfrozen"      json:"is_unfrozen"`     // flag to indicate this flow (rewards -> balance) was unfrozen
-	TokenGenMin int64             `gorm:"column:token_gen_min"      json:"token_gen_min"` // hops
-	TokenGenMax int64             `gorm:"column:token_gen_max"      json:"token_gen_max"` // hops
-	TokenAge    int64             `gorm:"column:token_age"      json:"token_age"`         // time since last move in seconds
+	RowId       uint64            `gorm:"primary_key;column:row_id"   json:"row_id"`          // internal: id, not height!
+	Height      int64             `gorm:"column:height"      json:"height"`                   // bc: block height (also for orphans)
+	Cycle       int64             `gorm:"column:cycle"      json:"cycle"`                     // bc: block cycle (tezos specific)
+	Timestamp   time.Time         `gorm:"column:time"      json:"time"`                       // bc: block creation time
+	AccountId   AccountID         `gorm:"column:account_id;index:acc"      json:"account_id"` // unique account id
+	OriginId    AccountID         `gorm:"column:origin_id;index:acc"      json:"origin_id"`   // origin account that initiated the flow
+	AddressType chain.AddressType `gorm:"column:address_type"      json:"address_type"`       // address type, usable as filter
+	Category    FlowCategory      `gorm:"column:category;index:type"      json:"category"`    // sub-account that received the update
+	Operation   FlowType          `gorm:"column:operation;index:type"      json:"operation"`  // op type that caused this update
+	AmountIn    int64             `gorm:"column:amount_in"      json:"amount_in"`             // sum flowing in to the account
+	AmountOut   int64             `gorm:"column:amount_out"      json:"amount_out"`           // sum flowing out of the account
+	IsFee       bool              `gorm:"column:is_fee"      json:"is_fee"`                   // flag to indicate this out-flow paid a fee
+	IsBurned    bool              `gorm:"column:is_burned"      json:"is_burned"`             // flag to indicate this out-flow was burned
+	IsFrozen    bool              `gorm:"column:is_frozen"      json:"is_frozen"`             // flag to indicate this in-flow is frozen
+	IsUnfrozen  bool              `gorm:"column:is_unfrozen"      json:"is_unfrozen"`         // flag to indicate this flow (rewards -> balance) was unfrozen
+	TokenGenMin int64             `gorm:"column:token_gen_min"      json:"token_gen_min"`     // hops
+	TokenGenMax int64             `gorm:"column:token_gen_max"      json:"token_gen_max"`     // hops
+	TokenAge    int64             `gorm:"column:token_age"      json:"token_age"`             // time since last move in seconds
 }
 
 func (f *Flow) ID() uint64 {

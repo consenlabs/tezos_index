@@ -32,11 +32,11 @@ func init() {
 // contains raw data and translations for related types such as operations, chain totals
 // rights, etc. that is used by indexers
 type Block struct {
-	RowId               uint64                 `gorm:"primary_key;column:row_id"   json:"row_id"`                                      // internal: id, not height!
+	RowId               uint64                 `gorm:"primary_key;unique_index;column:row_id"   json:"row_id"`                         // internal: id, not height!
 	ParentId            uint64                 `gorm:"column:parent_id"      json:"parent_id"`                                         // internal: parent block id
-	Hash                chain.StrBHash         `gorm:"column:hash"             json:"hash"`                                            // bc: block hash
+	Hash                chain.StrBHash         `gorm:"column:hash;index:hash"             json:"hash"`                                 // bc: block hash
 	IsOrphan            bool                   `gorm:"column:is_orphan"      json:"is_orphan,omitempty"`                               // internal: valid or orphan state
-	Height              int64                  `gorm:"column:height"      json:"height"`                                               // bc: block height (also for orphans)
+	Height              int64                  `gorm:"column:height;index:height"      json:"height"`                                  // bc: block height (also for orphans)
 	Cycle               int64                  `gorm:"column:cycle"      json:"cycle"`                                                 // bc: block cycle (tezos specific)
 	IsCycleSnapshot     bool                   `gorm:"column:is_cycle_snapshot"      json:"is_cycle_snapshot"`                         // will be set when snapshot index is determined
 	Timestamp           time.Time              `gorm:"column:time"      json:"time"`                                                   // bc: block creation time

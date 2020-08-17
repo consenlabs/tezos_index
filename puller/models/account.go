@@ -33,10 +33,10 @@ func (id AccountID) Value() uint64 {
 
 // Account is an up-to-date snapshot of the current status. For history look at Flow (balance updates).
 type Account struct {
-	RowId              AccountID         `gorm:"primary_key;column:row_id" json:"row_id"`
-	Hash               []byte            `gorm:"column:hash"  json:"hash"`
-	DelegateId         AccountID         `gorm:"column:delegate_id"   json:"delegate_id"`
-	ManagerId          AccountID         `gorm:"column:manager_id"  json:"manager_id"`
+	RowId              AccountID         `gorm:"primary_key;index;column:row_id" json:"row_id"`
+	Hash               []byte            `gorm:"column:hash;index:hash"  json:"hash"`
+	DelegateId         AccountID         `gorm:"column:delegate_id;index:acc"   json:"delegate_id"`
+	ManagerId          AccountID         `gorm:"column:manager_id;index:acc"  json:"manager_id"`
 	PubkeyHash         []byte            `gorm:"column:pubkey_hash"       json:"pubkey_hash"`
 	PubkeyType         chain.HashType    `gorm:"column:pubkey_type"    json:"pubkey_type"`
 	Type               chain.AddressType `gorm:"column:address_type"   json:"address_type"`
@@ -70,7 +70,7 @@ type Account struct {
 	IsDelegatable      bool              `gorm:"column:is_delegatable"    json:"is_delegatable"`
 	IsDelegated        bool              `gorm:"column:is_delegated"    json:"is_delegated"`
 	IsRevealed         bool              `gorm:"column:is_revealed"   json:"is_revealed"`
-	IsDelegate         bool              `gorm:"column:is_delegate"   json:"is_delegate"`
+	IsDelegate         bool              `gorm:"column:is_delegate;index:dlg"   json:"is_delegate"`
 	IsActiveDelegate   bool              `gorm:"column:is_active_delegate"    json:"is_active_delegate"`
 	IsContract         bool              `gorm:"column:is_contract"  json:"is_contract"` // smart contract with code
 	BlocksBaked        int               `gorm:"column:blocks_baked"  json:"blocks_baked"`

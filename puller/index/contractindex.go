@@ -80,7 +80,6 @@ func (idx *ContractIndex) ConnectBlock(ctx context.Context, block *models.Block,
 	}
 	// insert, will generate unique row ids
 	if len(ct) > 0 {
-
 		tx := idx.db.Begin()
 		for _, contract := range ct {
 			if err := tx.Create(contract).Error; err != nil {

@@ -25,7 +25,11 @@ func main() {
 	}
 	// puller
 	crawler.Start()
-	defer crawler.Stop(ctx)
+	defer func() {
+		// close indexer
+		_ = crawler.GetIndexer().Close()
+		crawler.Stop(ctx)
+	}()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c,

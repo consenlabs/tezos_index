@@ -417,6 +417,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 
 	// add unknown deactivated delegates (from parent block: we're deactivating
 	// AFTER a block has been fully indexed at the start of the next block)
+	// 添加父块中申请注销 delegate 的地址，注销操作在这个区块中才会正式生效
 	if b.parent != nil {
 		for _, v := range b.parent.TZ.Block.Metadata.Deactivated {
 			if _, ok := b.AccountByAddress(v); !ok {
@@ -638,7 +639,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 			// skip delegates (should have not been looked up in the first place)
 			if acc.IsDelegate {
 				acc.Free()
-				return nil
+				continue
 			}
 
 			// collect unknown delegates when referenced
@@ -683,7 +684,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 			// ignore when its an active delegate (then it's in the delegate maps)
 			if acc.IsActiveDelegate {
 				acc.Free()
-				return nil
+				continue
 			}
 			// handle like a regular account
 			hashKey := accountHashKey(acc)
