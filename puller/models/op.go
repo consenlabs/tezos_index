@@ -25,7 +25,7 @@ type Op struct {
 	Timestamp    time.Time       `gorm:"column:time"      json:"time"`                           // bc: op block time
 	Height       int64           `gorm:"column:height"      json:"height"`                       // bc: block height op was mined at
 	Cycle        int64           `gorm:"column:cycle"      json:"cycle"`                         // bc: block cycle (tezos specific)
-	Hash         chain.StrOpHash `gorm:"column:hash"             json:"hash"`                    // bc: unique op_id (op hash)
+	Hash         chain.StrOpHash `gorm:"column:hash;index:hash"             json:"hash"`         // bc: unique op_id (op hash)
 	Counter      int64           `gorm:"column:counter"     json:"counter"`                      // bc: counter
 	OpN          int             `gorm:"column:op_n"      json:"op_n"`                           // bc: position in block (block.Operations.([][]*OperationHeader) list position)
 	OpC          int             `gorm:"column:op_c"      json:"op_c"`                           // bc: position in OperationHeader.Contents.([]Operation) list

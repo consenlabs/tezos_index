@@ -34,12 +34,12 @@ func (id AccountID) Value() uint64 {
 // Account is an up-to-date snapshot of the current status. For history look at Flow (balance updates).
 type Account struct {
 	RowId              AccountID         `gorm:"primary_key;index;column:row_id" json:"row_id"`
-	Hash               []byte            `gorm:"column:hash;index:hash"  json:"hash"`
+	Hash               []byte            `gorm:"column:hash;index:addr"  json:"hash"`
 	DelegateId         AccountID         `gorm:"column:delegate_id;index:acc"   json:"delegate_id"`
 	ManagerId          AccountID         `gorm:"column:manager_id;index:acc"  json:"manager_id"`
 	PubkeyHash         []byte            `gorm:"column:pubkey_hash"       json:"pubkey_hash"`
 	PubkeyType         chain.HashType    `gorm:"column:pubkey_type"    json:"pubkey_type"`
-	Type               chain.AddressType `gorm:"column:address_type"   json:"address_type"`
+	Type               chain.AddressType `gorm:"column:address_type;index:addr"   json:"address_type"`
 	FirstIn            int64             `gorm:"column:first_in"   json:"first_in"`
 	FirstOut           int64             `gorm:"column:first_out"   json:"first_out"`
 	LastIn             int64             `gorm:"column:last_in" json:"last_in"`

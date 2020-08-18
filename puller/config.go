@@ -119,7 +119,7 @@ func (e *Environment) NewPuller() *Crawler {
 	indexer := NewIndexer(IndexerConfig{
 		StateDB: e.Engine,
 		CacheDB: e.RedisClient,
-		Indexes: []models.BlockIndexer{
+		Indexes: []models.BlockIndexer{ // **** 此处顺序不能变 ****
 			index.NewAccountIndex(e.Engine),
 			index.NewContractIndex(e.Engine),
 			index.NewBlockIndex(e.Engine),
