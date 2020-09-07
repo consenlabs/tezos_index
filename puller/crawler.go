@@ -11,6 +11,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
 	"runtime/debug"
+	"strconv"
 	"sync"
 	"tezos_index/chain"
 	"tezos_index/puller/models"
@@ -26,6 +27,8 @@ const (
 	MODE_INFO     Mode = "info"
 	MODE_ROLLBACK Mode = "rollback"
 )
+
+var IntegrityHead string = "INTEGRITY_HEAD"
 
 type State string
 
@@ -117,6 +120,10 @@ func (c *Crawler) Height() int64 {
 
 func (c *Crawler) Time() time.Time {
 	return c.tip.BestTime
+}
+
+func (c *Crawler) GetIndexer() *Indexer {
+	return c.indexer
 }
 
 func (c *Crawler) ParamsByHeight(height int64) *chain.Params {
@@ -856,6 +863,12 @@ func (c *Crawler) syncBlockchain() {
 		if err != nil {
 			log.Errorf("parse block hash error; er %v", err)
 		}
+
+		// update `INTEGRITY_HEAD` for table `harvester_status`
+		if err := models.UpdateHarvesterStatus(c.db, IntegrityHead, strconv.FormatInt(block.Height, 10)); err != nil {
+			log.Errorf("Update harvester_status table field `INTEGRITY_HEAD` error; error: %v, updateValue: %d", err, block.Height)
+		}
+
 		// update chain tip
 		newTip := &models.ChainTip{
 			Name:          tip.Name,
@@ -1048,6 +1061,7 @@ func (c *Crawler) fetchBlockByHeight(ctx context.Context, height int64) (*models
 	if err != nil || needUpdate {
 		// fetch params from chain
 		if height > 0 {
+			log.Debugf("rpc GetConstantsHeight; height: %d", height)
 			cons, err := c.rpc.GetConstantsHeight(ctx, height)
 			if err != nil {
 				return nil, fmt.Errorf("block init: %v", err)
@@ -1070,43 +1084,47 @@ func (c *Crawler) fetchBlockByHeight(ctx context.Context, height int64) (*models
 
 	// on first block after genesis, fetch rights for first 7 cycles [0..6]
 	// cycle 7 rights are then processed at block 4096+1
-	if height == 1 {
-		log.Infof("Fetching bootstrap rights for %d(+1) preserved cycles", b.Params.PreservedCycles)
-		for cycle := int64(0); cycle < b.Params.PreservedCycles+1; cycle++ {
-			// fetch using current height (context stores from [n-5, n+5])
-			br, er, _, err := c.fetchRightsByCycle(ctx, height, cycle)
-			if err != nil {
-				return nil, fmt.Errorf("fetching rights for cycle %d: %v", cycle, err)
-			}
-			b.Baking = append(b.Baking, br...)
-			b.Endorsing = append(b.Endorsing, er...)
-		}
-		return b, nil
-	}
+	// todo 临时屏蔽掉
+	// if height == 1 {
+	// 	log.Infof("Fetching bootstrap rights for %d(+1) preserved cycles", b.Params.PreservedCycles)
+	// 	for cycle := int64(0); cycle < b.Params.PreservedCycles+1; cycle++ {
+	// 		// fetch using current height (context stores from [n-5, n+5])
+	// 		br, er, _, err := c.fetchRightsByCycle(ctx, height, cycle)
+	// 		if err != nil {
+	// 			log.Errorf("fetchRightsByCycle error: %v", err)
+	// 			return nil, fmt.Errorf("fetching rights for cycle %d: %v", cycle, err)
+	// 		}
+	// 		b.Baking = append(b.Baking, br...)
+	// 		b.Endorsing = append(b.Endorsing, er...)
+	// 	}
+	// 	return b, nil
+	// }
 
-	// start fetching more rights after bootstrap (max look-ahead is 5 on mainnet)
-	if b.Cycle > 0 && b.Params.IsCycleStart(height) {
-		// snapshot index and rights for future cycle N; the snapshot index
-		// refers to a snapshot block taken in cycle N-7 and randomness
-		// collected from seed_nonce_revelations during cycle N-6; N is the
-		// farthest future cycle that we can fetch data for.
-		//
-		// Note that for consistency and due to an off-by-one error in Tezos RPC
-		// we fetch snapshot index and rights at the START of cycle N-5 even
-		// though they are created at the end of N-6!
-		cycle := b.Cycle + b.Params.PreservedCycles
-		br, er, snap, err := c.fetchRightsByCycle(ctx, height, cycle)
-		if err != nil {
-			return nil, fmt.Errorf("fetching rights for cycle %d: %v", cycle, err)
-		}
-		b.Baking = br
-		b.Endorsing = er
-		b.Snapshot = snap
-	}
+	// // start fetching more rights after bootstrap (max look-ahead is 5 on mainnet)
+	// todo 临时屏蔽掉
+	// if b.Cycle > 0 && b.Params.IsCycleStart(height) {
+	// 	// snapshot index and rights for future cycle N; the snapshot index
+	// 	// refers to a snapshot block taken in cycle N-7 and randomness
+	// 	// collected from seed_nonce_revelations during cycle N-6; N is the
+	// 	// farthest future cycle that we can fetch data for.
+	// 	//
+	// 	// Note that for consistency and due to an off-by-one error in Tezos RPC
+	// 	// we fetch snapshot index and rights at the START of cycle N-5 even
+	// 	// though they are created at the end of N-6!
+	// 	cycle := b.Cycle + b.Params.PreservedCycles
+	// 	br, er, snap, err := c.fetchRightsByCycle(ctx, height, cycle)
+	// 	if err != nil {
+	// 		return nil, fmt.Errorf("fetching rights for cycle %d: %v", cycle, err)
+	// 	}
+	// 	b.Baking = br
+	// 	b.Endorsing = er
+	// 	b.Snapshot = snap
+	// }
 	return b, nil
 }
 
 func (c *Crawler) fetchRightsByCycle(ctx context.Context, height, cycle int64) ([]rpc.BakingRight, []rpc.EndorsingRight, *rpc.SnapshotIndex, error) {
+	log.Debugf("start GetBakingRightsCycle...; height: %d, cycle: %d", height, cycle)
 	br, err := c.rpc.GetBakingRightsCycle(ctx, height, cycle)
 	if err != nil {
 		return nil, nil, nil, err
@@ -1114,6 +1132,7 @@ func (c *Crawler) fetchRightsByCycle(ctx context.Context, height, cycle int64) (
 	if len(br) == 0 {
 		return nil, nil, nil, fmt.Errorf("empty baking rights, make sure your Tezos node runs in archive mode")
 	}
+	log.Debugf("start GetEndorsingRightsCycle...; height: %d, cycle: %d", height, cycle)
 	er, err := c.rpc.GetEndorsingRightsCycle(ctx, height, cycle)
 	if err != nil {
 		return br, nil, nil, err
@@ -1121,6 +1140,7 @@ func (c *Crawler) fetchRightsByCycle(ctx context.Context, height, cycle int64) (
 	if len(er) == 0 {
 		return nil, nil, nil, fmt.Errorf("empty endorsing rights, make sure your Tezos node runs in archive mode")
 	}
+	log.Debugf("start GetSnapshotIndexCycle...; height: %d, cycle: %d", height, cycle)
 	snap, err := c.rpc.GetSnapshotIndexCycle(ctx, height, cycle)
 	if err != nil {
 		return br, er, nil, err

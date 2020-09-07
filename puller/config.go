@@ -43,6 +43,7 @@ type Environment struct {
 func NewEnvironment() *Environment {
 	flag.String("mysql", common.DefaultString, "tezos mysql uri like 'mysql://tcp(ip:[port]/database'")
 	flag.String("chain", common.DefaultString, "tezos json-rpc like 'http://faq:faq@localhost:18332/0'")
+	flag.String("proxy", common.DefaultString, "tezos json-rpc like 'http://faq:faq@localhost:18332/0'")
 	flag.String("api-url", common.DefaultString, "api url like 'http://:111")
 	flag.String("redis", common.DefaultString, "redis url like ")
 	flag.Int("start", common.DefaultInt, "tezos start with special block number")

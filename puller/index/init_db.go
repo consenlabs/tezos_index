@@ -34,5 +34,5 @@ func autoCreateTable() {
 	DB.AutoMigrate(&models.Account{}, &models.Block{}, &models.Chain{}, &models.Flow{},
 		&models.Contract{}, &models.Op{}, &models.Supply{}, &models.BigMapItem{}, &models.Election{},
 		&models.Proposal{}, &models.Vote{}, &models.Ballot{}, &models.Income{}, &models.Right{},
-		&models.Snapshot{})
+		&models.Snapshot{}, &models.HarvesterStatus{})
 }
