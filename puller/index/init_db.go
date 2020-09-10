@@ -4,10 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/zyjblockchain/sandy_log/log"
-	"tezos_index/puller/models"
 )
-
-var DB *gorm.DB
 
 func InitDB(dsn string) *gorm.DB {
 	log.Infof("数据库dsn: %s", dsn)
@@ -22,17 +19,6 @@ func InitDB(dsn string) *gorm.DB {
 	} else {
 		db.LogMode(true)
 	}
-
-	DB = db
-	autoCreateTable()
 	log.Infof("数据库连接成功")
 	return db
-}
-
-// autoCreateTable 自动建表
-func autoCreateTable() {
-	DB.AutoMigrate(&models.Account{}, &models.Block{}, &models.Chain{}, &models.Flow{},
-		&models.Contract{}, &models.Op{}, &models.Supply{}, &models.BigMapItem{}, &models.Election{},
-		&models.Proposal{}, &models.Vote{}, &models.Ballot{}, &models.Income{}, &models.Right{},
-		&models.Snapshot{}, &models.HarvesterStatus{})
 }

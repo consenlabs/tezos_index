@@ -11,6 +11,8 @@ require (
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/inconshreveable/log15 v0.0.0-20200109203555-b30bc20e4fd1
 	github.com/jinzhu/gorm v1.9.15
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pressly/goose v2.6.0+incompatible
 	github.com/spf13/pflag v1.0.3
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.4.0

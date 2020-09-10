@@ -18,6 +18,10 @@ func main() {
 	ctx := context.Background()
 	// 1. env
 	env := puller.NewEnvironment()
+
+	// migration database
+	env.UpgradeSchema()
+
 	crawler := env.NewPuller()
 	// init
 	if err := crawler.Init(ctx, puller.MODE_SYNC); err != nil {

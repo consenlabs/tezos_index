@@ -1,15 +1,18 @@
 package puller
 
 import (
+	"database/sql"
 	"flag"
 	"github.com/go-redis/redis"
 	"github.com/jinzhu/gorm"
+	"github.com/pressly/goose"
 	"github.com/zyjblockchain/sandy_log/log"
 	log2 "github.com/zyjblockchain/sandy_log/log"
 	"net/http"
 	"net/url"
 	"tezos_index/common"
 	"tezos_index/puller/index"
+	_ "tezos_index/puller/migration"
 	"tezos_index/puller/models"
 	"tezos_index/rpc"
 )
@@ -37,7 +40,6 @@ type Environment struct {
 	Engine      *gorm.DB
 	Client      *rpc.Client
 	RedisClient *redis.Client
-	// RiskClient *risk.Client
 }
 
 func NewEnvironment() *Environment {
@@ -147,18 +149,62 @@ func (e *Environment) NewPuller() *Crawler {
 	return NewCrawler(cf)
 }
 
-//
-// func (e *Environment) NewWalletService() *WalletService {
-// 	return NewWalletService(e)
-// }
-//
-// func (e *Environment) NewContractQuery() *ContractQuery {
-// 	return NewContractQuery(e)
-// }
-//
-// func (e *Environment) UpgradeSchema() {
-// 	if err := common.UpgradeSchema(e.Conf.Mysql); err != nil {
-// 		log2.Crit("upgrade database", "uri", e.Conf.Mysql, "err", err)
-// 		panic("system fail")
-// 	}
-// }
+// UpgradeSchema auto migrate
+func (e *Environment) UpgradeSchema() {
+	if err := upgrade(e.Conf.Mysql); err != nil {
+		log.Crit("upgrade database", "uri", e.Conf.Mysql, "err", err)
+		panic("system fail")
+	}
+}
+
+// RollbackSchema when need to rollback database
+func (e *Environment) RollbackSchema(version string) {
+	if err := rollback(e.Conf.Mysql, version); err != nil {
+		log.Crit("rollback database", "uri", e.Conf.Mysql, "err", err)
+		panic("system fail")
+	}
+}
+
+func upgrade(dsn string) error {
+	var err error
+	var db *sql.DB
+
+	db, err = sql.Open("mysql", dsn)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	err = goose.SetDialect("mysql")
+	if err != nil {
+		return err
+	}
+	err = goose.Run("up", db, ".")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func rollback(dsn string, version string) error {
+	var err error
+	var db *sql.DB
+
+	db, err = sql.Open("mysql", dsn)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	err = goose.SetDialect("mysql")
+	if err != nil {
+		return err
+	}
+	if version == "" {
+		err = goose.Run("down", db, ".")
+	} else {
+		err = goose.Run("down-to", db, ".", version)
+	}
+	return err
+}
