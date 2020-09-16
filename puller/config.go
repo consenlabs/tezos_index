@@ -76,7 +76,7 @@ func NewEnvironment() *Environment {
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     conf.Redis,
 		Password: "",
-		DB:       0,
+		DB:       3,
 	})
 
 	conf.Mysql = viperConfig.GetString(domain, "mysql")

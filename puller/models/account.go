@@ -40,6 +40,7 @@ type Account struct {
 	PubkeyHash         []byte            `gorm:"column:pubkey_hash"       json:"pubkey_hash"`
 	PubkeyType         chain.HashType    `gorm:"column:pubkey_type"    json:"pubkey_type"`
 	Type               chain.AddressType `gorm:"column:address_type;index:addr"   json:"address_type"`
+	Addr               string            `gorm:"column:address" json:"-"`
 	FirstIn            int64             `gorm:"column:first_in"   json:"first_in"`
 	FirstOut           int64             `gorm:"column:first_out"   json:"first_out"`
 	LastIn             int64             `gorm:"column:last_in" json:"last_in"`

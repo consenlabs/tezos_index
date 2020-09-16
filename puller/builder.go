@@ -712,6 +712,7 @@ func (b *Builder) InitAccounts(ctx context.Context) error {
 		tx := b.idx.statedb.Begin()
 		for _, acc := range newacc {
 			acc.RowId = models.AccountID(0)
+			acc.Addr = acc.String()
 			if err := tx.Create(acc).Error; err != nil {
 				tx.Rollback()
 				return err
@@ -1345,6 +1346,7 @@ func (b *Builder) BuildGenesisBlock(ctx context.Context) (*models.Block, error) 
 	// TODO batch insert
 	tx := b.idx.statedb.Begin()
 	for _, acc := range accounts {
+		acc.Addr = acc.String()
 		if err := tx.Create(acc).Error; err != nil {
 			tx.Rollback()
 			log.Errorf("insert account error: %v", err)

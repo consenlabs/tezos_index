@@ -531,6 +531,7 @@ func (m *Indexer) LookupAccount(ctx context.Context, addr chain.Address) (*model
 	acc := &models.Account{}
 	err := m.statedb.Where("hash = ? and address_type = ?", addr.Hash, addr.Type).First(acc).Error
 	if err == gorm.ErrRecordNotFound {
+		log.Errorf("hash: %v, type: %d, address: %s", addr.Hash, addr.Type, addr.String())
 		return nil, index.ErrNoAccountEntry
 	}
 	if err != nil {
