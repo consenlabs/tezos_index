@@ -72,7 +72,7 @@ type Account struct {
 	IsDelegated        bool              `gorm:"column:is_delegated"    json:"is_delegated"`
 	IsRevealed         bool              `gorm:"column:is_revealed"   json:"is_revealed"`
 	IsDelegate         bool              `gorm:"column:is_delegate;index:dlg"   json:"is_delegate"`
-	IsActiveDelegate   bool              `gorm:"column:is_active_delegate"    json:"is_active_delegate"`
+	IsActiveDelegate   bool              `gorm:"column:is_active_delegate;index:act_del"    json:"is_active_delegate"`
 	IsContract         bool              `gorm:"column:is_contract"  json:"is_contract"` // smart contract with code
 	BlocksBaked        int               `gorm:"column:blocks_baked"  json:"blocks_baked"`
 	BlocksMissed       int               `gorm:"column:blocks_missed"   json:"blocks_missed"`

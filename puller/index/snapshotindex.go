@@ -73,7 +73,7 @@ func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block,
 		ownbalance := a.SpendableBalance + a.FrozenDeposits + a.FrozenFees
 		stakingBalance := ownbalance + a.DelegatedBalance
 		if stakingBalance < block.Params.TokensPerRoll {
-			return nil
+			continue
 		}
 		snap := models.NewSnapshot()
 		snap.Height = block.Height
