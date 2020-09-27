@@ -601,7 +601,7 @@ func (c *Crawler) runIngest(next chan chain.BlockHash) {
 					continue
 				}
 				// reset last block
-				lastblock = c.Tip().BestHeight
+				lastblock = c.Tip().BestHeight + int64(len(c.queue))
 
 				// handle RPC errors (wait and retry)
 				switch e := err.(type) {

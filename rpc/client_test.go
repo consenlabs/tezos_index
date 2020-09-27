@@ -15,6 +15,19 @@ func TestClient_GetConstants(t *testing.T) {
 	constants, err := client.GetConstantsHeight(context.Background(), 1)
 	assert.NoError(t, err)
 	t.Log(constants)
+	// mon := NewBlockHeaderMonitor()
+	// err = client.MonitorBlockHeader(context.Background(),mon)
+	// if err != nil {
+	// 	t.Log(err)
+	// }
+	// for {
+	// 	head, err := mon.Recv(context.Background())
+	// 	if err != nil {
+	// 		t.Log(err)
+	// 		return
+	// 	}
+	// 	t.Log(head.Level)
+	// }
 }
 
 func TestClient_GetBlockHeight(t *testing.T) {
