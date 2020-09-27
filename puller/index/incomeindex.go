@@ -456,6 +456,7 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 			return err
 		}
 	}
+	tx.Commit()
 	return nil
 }
 

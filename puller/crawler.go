@@ -761,7 +761,7 @@ func (c *Crawler) syncBlockchain() {
 		}
 
 	again:
-		if errCount > 1 {
+		if errCount > 0 { // 原来为1
 			log.Infof("Stopping blockchain sync due to too many errors at %d.", tip.BestHeight)
 			c.Lock()
 			c.state = STATE_FAILED
