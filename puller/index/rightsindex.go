@@ -159,44 +159,50 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 		ins = append(ins, r)
 	}
 
-	// todo batch insert
-	tx = idx.DB().Begin()
-	for _, v := range ins {
-		if err := tx.Create(v).Error; err != nil {
-			tx.Rollback()
+	// // todo batch insert 弃用
+	// tx = idx.DB().Begin()
+	// for _, v := range ins {
+	// 	if err := tx.Create(v).Error; err != nil {
+	// 		tx.Rollback()
+	// 		return err
+	// 	}
+	// }
+	// tx.Commit()
+
+	// 批量插入right
+	if len(ins) != 0 {
+		batch := 200
+		if err := BatchInsertRights(ins, batch, idx.DB()); err != nil {
+			log.Errorf("batch insert rights error: %v", err)
 			return err
 		}
 	}
-	tx.Commit()
-	// if err := batchInsertRights(ins, idx.DB()); err != nil {
-	// 	log.Errorf("batch insert rights error: %v", err)
-	// 	return err
-	// }
 	return nil
 }
 
-func batchInsertRights(records []*models.Right, db *gorm.DB) error {
-	if len(records) == 0 {
-		return nil
+func BatchInsertRights(records []*models.Right, batch int, db *gorm.DB) error {
+	tx := db.Begin()
+	if batch == 0 {
+		batch = 1
 	}
-	log.Debugf("start batch insert rights; length = %d", len(records))
-	sql := "INSERT INTO `rights` (`type`, `height`, `cycle`, `priority`, `account_id`, `is_lost`, `is_stolen`, `is_missed`, `is_seed_required`," +
-		" `is_seed_revealed`) VALUES "
-	// 循环data数组,组合sql语句
-	for key, value := range records {
-		if len(records)-1 == key {
-			// 最后一条数据 以分号结尾
-			sql += fmt.Sprintf("('%d','%d','%d','%d','%d','%t','%t','%t','%t','%t');",
-				value.Type, value.Height, value.Cycle, value.Priority, value.AccountId,
+	sql := "INSERT INTO rights(type,height,cycle,priority,account_id,is_lost,is_stolen,is_missed,is_seed_required,is_seed_revealed) VALUES "
+	val := ""
+	for index, value := range records {
+		if index > 0 && index%batch == 0 || index == len(records)-1 {
+			val += fmt.Sprintf("(%d,%d,%d,%d,%d,%t,%t,%t,%t,%t);", value.Type, value.Height, value.Cycle, value.Priority, value.AccountId,
 				value.IsLost, value.IsStolen, value.IsMissed, value.IsSeedRequired, value.IsSeedRevealed)
+			if err := tx.Exec(sql + val).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+			val = ""
 		} else {
-			sql += fmt.Sprintf("('%d','%d','%d','%d','%d','%t','%t','%t','%t','%t'),",
-				value.Type, value.Height, value.Cycle, value.Priority, value.AccountId,
+			val += fmt.Sprintf("(%d,%d,%d,%d,%d,%t,%t,%t,%t,%t),", value.Type, value.Height, value.Cycle, value.Priority, value.AccountId,
 				value.IsLost, value.IsStolen, value.IsMissed, value.IsSeedRequired, value.IsSeedRevealed)
 		}
 	}
-	err := db.Exec(sql).Error
-	return err
+	tx.Commit()
+	return nil
 }
 
 func (idx *RightsIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
