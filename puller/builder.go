@@ -982,7 +982,7 @@ func (b *Builder) RollbackInvoices(ctx context.Context) error {
 		}
 		acc, ok := b.AccountByAddress(addr)
 		if !ok {
-			return fmt.Errorf("rollback invoice: unknown invoice account %s", n, err)
+			return fmt.Errorf("rollback invoice: unknown invoice account %s: %v", n, err)
 		}
 		b.block.Flows = append(b.block.Flows, b.NewInvoiceFlow(acc, v))
 		if acc.FirstSeen == b.block.Height {
@@ -1392,12 +1392,14 @@ func (b *Builder) BuildGenesisBlock(ctx context.Context) (*models.Block, error) 
 	return b.block, nil
 }
 
-func BatchInsertAccounts(records []*models.Account, db *gorm.DB) error { // todo 不可用
+// BatchInsertAccount 弃用, hash 和 pubkey_hash 输入为string 类型，存在特殊字符的时候灰报错
+func BatchInsertAccount(records []*models.Account, batch int, db *gorm.DB) error {
 	if len(records) == 0 {
 		return nil
 	}
-	log.Debugf("start batch insert accounts; length = %d", len(records))
-	sql := "INSERT INTO `accounts` (`hash`, `delegate_id`, `manager_id`, `pubkey_hash`, `pubkey_type`, `address_type`, `first_in`, `first_out`, `last_in`," +
+	tx := db.Begin()
+	val := ""
+	sql := "INSERT INTO accounts(`hash`, `delegate_id`, `manager_id`, `pubkey_hash`, `pubkey_type`, `address_type`, `first_in`, `first_out`, `last_in`," +
 		" `last_out`, `first_seen`,`last_seen`,`delegated_since`,`delegate_since`,`total_received`,`total_sent`,`total_burned`," +
 		" `total_fees_paid`,`total_rewards_earned`,`total_fees_earned`,`total_lost`,`frozen_deposits`,`frozen_rewards`," +
 		" `frozen_fees`,`unclaimed_balance`,`spendable_balance`,`delegated_balance`,`total_delegations`,`active_delegations`," +
@@ -1405,21 +1407,24 @@ func BatchInsertAccounts(records []*models.Account, db *gorm.DB) error { // todo
 		" `is_active_delegate`,`is_contract`,`blocks_baked`, `blocks_missed`,`blocks_stolen`,`blocks_endorsed`,`slots_endorsed`," +
 		" `slots_missed`,`n_ops`,`n_ops_failed`,`n_tx`,`n_delegation`,`n_origination`,`n_proposal`,`n_ballot`,`token_gen_min`," +
 		" `token_gen_max`,`grace_period`) VALUES "
-	// 循环data数组,组合sql语句
-	for key, v := range records {
-		if len(records)-1 == key {
-			// 最后一条数据 以分号结尾
-			sql += fmt.Sprintf("('%s','%d','%d','%s','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%t','%t','%t','%t','%t','%t','%t','%t','%t','%t','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d');",
-				string(v.Hash), v.DelegateId, v.ManagerId, string(v.PubkeyHash), v.PubkeyType, v.Type, v.FirstIn, v.FirstOut, v.LastIn, v.LastOut,
+	for indx, v := range records {
+		if indx > 0 && indx%batch == 0 || indx == len(records)-1 {
+			val += fmt.Sprintf(`(%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%t,%t,%t,%t,%t,%t,%t,%t,%t,%t,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d);`,
+				string(v.Hash), uint64(v.DelegateId), uint64(v.ManagerId), string(v.PubkeyHash), v.PubkeyType, v.Type, v.FirstIn, v.FirstOut, v.LastIn, v.LastOut,
 				v.FirstSeen, v.LastSeen, v.DelegatedSince, v.DelegateSince, v.TotalReceived, v.TotalSent, v.TotalBurned,
 				v.TotalFeesPaid, v.TotalRewardsEarned, v.TotalFeesEarned, v.TotalLost, v.FrozenDeposits, v.FrozenRewards, v.FrozenFees,
 				v.UnclaimedBalance, v.SpendableBalance, v.DelegatedBalance, v.TotalDelegations, v.ActiveDelegations, v.IsFunded, v.IsActivated,
 				v.IsVesting, v.IsSpendable, v.IsDelegatable, v.IsDelegated, v.IsRevealed, v.IsDelegate, v.IsActiveDelegate, v.IsContract,
 				v.BlocksBaked, v.BlocksMissed, v.BlocksStolen, v.BlocksEndorsed, v.SlotsEndorsed, v.SlotsMissed, v.NOps, v.NOpsFailed,
 				v.NTx, v.NDelegation, v.NOrigination, v.NProposal, v.NBallot, v.TokenGenMin, v.TokenGenMax, v.GracePeriod)
+			if err := tx.Exec(sql + val).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+			val = ""
 		} else {
-			sql += fmt.Sprintf("('%s','%d','%d','%s','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%t','%t','%t','%t','%t','%t','%t','%t','%t','%t','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d','%d'),",
-				string(v.Hash), v.DelegateId, v.ManagerId, string(v.PubkeyHash), v.PubkeyType, v.Type, v.FirstIn, v.FirstOut, v.LastIn, v.LastOut,
+			val += fmt.Sprintf(`(%s,%d,%d,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%t,%t,%t,%t,%t,%t,%t,%t,%t,%t,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d),`,
+				string(v.Hash), uint64(v.DelegateId), uint64(v.ManagerId), string(v.PubkeyHash), v.PubkeyType, v.Type, v.FirstIn, v.FirstOut, v.LastIn, v.LastOut,
 				v.FirstSeen, v.LastSeen, v.DelegatedSince, v.DelegateSince, v.TotalReceived, v.TotalSent, v.TotalBurned,
 				v.TotalFeesPaid, v.TotalRewardsEarned, v.TotalFeesEarned, v.TotalLost, v.FrozenDeposits, v.FrozenRewards, v.FrozenFees,
 				v.UnclaimedBalance, v.SpendableBalance, v.DelegatedBalance, v.TotalDelegations, v.ActiveDelegations, v.IsFunded, v.IsActivated,
@@ -1428,8 +1433,8 @@ func BatchInsertAccounts(records []*models.Account, db *gorm.DB) error { // todo
 				v.NTx, v.NDelegation, v.NOrigination, v.NProposal, v.NBallot, v.TokenGenMin, v.TokenGenMax, v.GracePeriod)
 		}
 	}
-	err := db.Exec(sql).Error
-	return err
+	tx.Commit()
+	return nil
 }
 
 func (b *Builder) FixUpgradeBugs(ctx context.Context, prevparams, nextparams *chain.Params) error {

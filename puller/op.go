@@ -27,7 +27,7 @@ func (b *Builder) NewActivationOp(ctx context.Context, oh *rpc.OperationHeader, 
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("activation op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("activation op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 
 	// need to lookup using blinded key
@@ -148,7 +148,7 @@ func (b *Builder) NewEndorsementOp(ctx context.Context, oh *rpc.OperationHeader,
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("endorsement op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("endorsement op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	acc, ok := b.AccountByAddress(eop.Metadata.Delegate)
 	if !ok {
@@ -221,7 +221,7 @@ func (b *Builder) NewBallotOp(ctx context.Context, oh *rpc.OperationHeader, op_n
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("ballot op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("ballot op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	acc, ok := b.AccountByAddress(bop.Source)
 	if !ok {
@@ -264,7 +264,7 @@ func (b *Builder) NewProposalsOp(ctx context.Context, oh *rpc.OperationHeader, o
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("proposals op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("proposals op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	acc, ok := b.AccountByAddress(pop.Source)
 	if !ok {
@@ -313,7 +313,7 @@ func (b *Builder) NewRevealOp(ctx context.Context, oh *rpc.OperationHeader, op_n
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("revelation op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("revelation op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	src, ok := b.AccountByAddress(rop.Source)
 	if !ok {
@@ -395,7 +395,7 @@ func (b *Builder) NewSeedNonceOp(ctx context.Context, oh *rpc.OperationHeader, o
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("seed nonce op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("seed nonce op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 
 	flows, err := b.NewSeedNonceFlows(sop.Metadata.BalanceUpdates)
@@ -437,7 +437,7 @@ func (b *Builder) NewDoubleBakingOp(ctx context.Context, oh *rpc.OperationHeader
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("double baking op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("double baking op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	upd := dop.Metadata.BalanceUpdates
 	accuser, ok := b.AccountByAddress(upd[len(upd)-1].(*rpc.FreezerBalanceUpdate).Delegate)
@@ -504,7 +504,7 @@ func (b *Builder) NewDoubleEndorsingOp(ctx context.Context, oh *rpc.OperationHea
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("double endorse op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("double endorse op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	upd := dop.Metadata.BalanceUpdates
 	accuser, ok := b.AccountByAddress(upd[len(upd)-1].(*rpc.FreezerBalanceUpdate).Delegate)
@@ -573,7 +573,7 @@ func (b *Builder) NewTransactionOp(ctx context.Context, oh *rpc.OperationHeader,
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("transaction op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("transaction op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	src, ok := b.AccountByAddress(top.Source)
 	if !ok {
@@ -792,7 +792,7 @@ func (b *Builder) NewInternalTransactionOp(ctx context.Context, origsrc, origdlg
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("internal transaction op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("internal transaction op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	var srcdlg, dstdlg *Account
 	if src.DelegateId != 0 {
@@ -967,7 +967,7 @@ func (b *Builder) NewOriginationOp(ctx context.Context, oh *rpc.OperationHeader,
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("origination op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("origination op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	src, ok := b.AccountByAddress(oop.Source)
 	if !ok {
@@ -1196,7 +1196,7 @@ func (b *Builder) NewInternalOriginationOp(ctx context.Context, origsrc, origdlg
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("internal origination op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("internal origination op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	var srcdlg, dst *Account
 	if src.DelegateId != 0 {
@@ -1344,7 +1344,7 @@ func (b *Builder) NewDelegationOp(ctx context.Context, oh *rpc.OperationHeader, 
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("delegation op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("delegation op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	src, ok := b.AccountByAddress(dop.Source)
 	if !ok {
@@ -1518,7 +1518,7 @@ func (b *Builder) NewDelegationOp(ctx context.Context, oh *rpc.OperationHeader, 
 				} else if prevop.DelegateId != 0 {
 					odlg, ok = b.AccountById(prevop.DelegateId)
 					if !ok {
-						return fmt.Errorf("delegation rollback [%d:%d]: missing origin delegate %s", op_n, op_c, prevop.DelegateId)
+						return fmt.Errorf("delegation rollback [%d:%d]: missing origin delegate %d", op_n, op_c, prevop.DelegateId)
 					}
 				}
 			}
@@ -1557,7 +1557,7 @@ func (b *Builder) NewInternalDelegationOp(ctx context.Context, origsrc, origdlg 
 	}
 	branch, ok := b.BranchByHash(oh.Branch)
 	if !ok {
-		return fmt.Errorf("internal delegation op [%d:%d]: missing branch %s", oh.Branch)
+		return fmt.Errorf("internal delegation op [%d:%d]: missing branch %s", op_n, op_c, oh.Branch)
 	}
 	var odlg, ndlg *Account
 	if src.DelegateId != 0 {
@@ -1699,7 +1699,7 @@ func (b *Builder) NewInternalDelegationOp(ctx context.Context, origsrc, origdlg 
 				} else if prevop.DelegateId != 0 {
 					odlg, ok = b.AccountById(prevop.DelegateId)
 					if !ok {
-						return fmt.Errorf("delegation rollback [%d:%d]: missing origin delegate %s", op_n, op_c, prevop.DelegateId)
+						return fmt.Errorf("delegation rollback [%d:%d]: missing origin delegate %d", op_n, op_c, prevop.DelegateId)
 					}
 				}
 			}
