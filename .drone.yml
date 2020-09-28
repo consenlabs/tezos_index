@@ -10,7 +10,7 @@ steps:
 - name: build
   image: golang:1.13.8
   commands:
-  - make
+  - go build .
   environment:
     GOCACHE: /cache/go-build
     GOPATH: /cache/go

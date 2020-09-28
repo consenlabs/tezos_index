@@ -1,8 +1,8 @@
 APP=tezos_index
 build: clean
-	go build -o ${APP} cmd/main.go
+	go build -o ${APP}
 
 run:
-	go run -race cmd/main.go
+	go run -race
 clean:
 	go clean
