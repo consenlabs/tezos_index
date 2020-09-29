@@ -2,7 +2,7 @@
 kind: pipeline
 name: tezos_index
 
-plateform:
+platform:
   os: linux
   arch: amd64
 
@@ -25,14 +25,14 @@ steps:
     registry: registry.cn-hongkong.aliyuncs.com
     repo: registry.cn-hongkong.aliyuncs.com/imtoken/tezos_index
     tags:
-      - ${DRONE_COMMIT_SHA:0:8}
+    - ${DRONE_COMMIT_SHA:0:8}
     username:
       from_secret: docker-username
   when:
     branch:
-      - hotfix/*
-      - feature/*
-      - support/*
+    - hotfix/*
+    - feature/*
+    - support/*
 
 - name: publish-on-release-tezos_index
   image: plugins/docker
@@ -44,13 +44,13 @@ steps:
     registry: registry.cn-hongkong.aliyuncs.com
     repo: registry.cn-hongkong.aliyuncs.com/imtoken/tezos_index
     tags:
-      - ${DRONE_COMMIT_SHA:0:8}
-      - staging
+    - ${DRONE_COMMIT_SHA:0:8}
+    - staging
     username:
       from_secret: docker-username
   when:
     branch:
-      - release/*
+    - release/*
 
 - name: publish-on-stable-branch-tezos_index
   image: plugins/docker
@@ -62,15 +62,15 @@ steps:
     registry: registry.cn-hongkong.aliyuncs.com
     repo: registry.cn-hongkong.aliyuncs.com/imtoken/tezos_index
     tags:
-      - ${DRONE_COMMIT_SHA:0:8}
-      - ${DRONE_COMMIT_BRANCH}
-      - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:8}
+    - ${DRONE_COMMIT_SHA:0:8}
+    - ${DRONE_COMMIT_BRANCH}
+    - ${DRONE_COMMIT_BRANCH}-${DRONE_COMMIT_SHA:0:8}
     username:
       from_secret: docker-username
   when:
     branch:
-      - develop
-      - master
+    - develop
+    - master
 
 - name: publish-on-tag-tezos_index
   image: plugins/docker
@@ -86,11 +86,15 @@ steps:
       from_secret: docker-username
   when:
     event:
-      - tag
+    - tag
 
 - name: deploy-develop
   image: registry.cn-hongkong.aliyuncs.com/imtoken/drone-k8s:latest
   settings:
+    deployment:
+    - tezos-polling-dev:tezos-polling
+    - tezos-api-dev:tezos-api
+    - tezos-notifier-dev:tezos-notifier
     kubernetes_server:
       from_secret: gcp-server-dev
     kubernetes_token:
@@ -100,15 +104,19 @@ steps:
     tag: ${DRONE_COMMIT_SHA:0:8}
   when:
     branch:
-      - feature/*
-      - hotfix/*
-      - develop
+    - feature/*
+    - hotfix/*
+    - develop
     event:
-      - push
+    - push
 
 - name: deploy-staging
   image: registry.cn-hongkong.aliyuncs.com/imtoken/drone-k8s:latest
   settings:
+    deployment:
+    - tezos-polling-staging:tezos-polling
+    - tezos-api-staging:tezos-api
+    - tezos-notifier-staging:tezos-notifier
     kubernetes_server:
       from_secret: gcp-server-staging
     kubernetes_token:
@@ -118,9 +126,9 @@ steps:
     tag: ${DRONE_COMMIT_SHA:0:8}
   when:
     branch:
-      - release/*
+    - release/*
     event:
-      - push
+    - push
 
 - name: slack
   image: plugins/slack
@@ -130,15 +138,14 @@ steps:
       from_secret: drone-slack
   when:
     status:
-      - success
-      - failure
+    - success
+    - failure
 
 trigger:
   event:
-    - push
-    - tag
-
-ref:
+  - push
+  - tag
+  ref:
   - refs/heads/develop
   - refs/heads/master
   - refs/heads/hotfix/*
@@ -146,7 +153,6 @@ ref:
   - refs/heads/support/*
   - refs/heads/release/*
   - refs/tags/*
-
 
 ---
 kind: secret

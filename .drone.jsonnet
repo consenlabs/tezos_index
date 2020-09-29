@@ -7,18 +7,16 @@ local repo = 'tezos_index';
   volumes: utils.volumes(repo),
   steps: [
     utils.golang('build',
-                 ['make']),
-    utils.golang('test',
-                 [
-                 ],
-                 { APP_ENVIRONMENT: 'test', POSTGRES: 'postgres' }),
+                 ['go build .']),
   ] + utils.default_publish(repo) + [
     //deploy to develop
     utils.deploy('deploy-develop',
                  'dev',
                  'biz',
                  repo,
-                 utils.adjust_deployment([
+                 utils.adjust_deployment(['tezos-polling',
+                 'tezos-api',
+                 'tezos-notifier'
                  ], 'dev'),
                  { branch: ['feature/*','hotfix/*', 'develop'], event: 'push' }),
 
@@ -27,7 +25,9 @@ local repo = 'tezos_index';
                  'staging',
                  'biz',
                  repo,
-                 utils.adjust_deployment([
+                 utils.adjust_deployment(['tezos-polling',
+                 'tezos-api',
+                 'tezos-notifier'
                  ], 'staging'),
                  { branch: ['release/*'], event: 'push' })
     ,
