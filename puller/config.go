@@ -103,7 +103,7 @@ func NewEnvironment() *Environment {
 		tr := &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
 		httpClient = &http.Client{Transport: tr}
 	}
-
+	conf.Chain = "https://mainnet-tezos.giganode.io" // todo 节点还在同步数据，暂时使用第三方node
 	client, err := rpc.NewClient(httpClient, conf.Chain)
 	if err != nil {
 		log.Errorf("connect tezos node client error: %v", err)
