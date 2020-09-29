@@ -10,6 +10,8 @@ import (
 	log2 "github.com/zyjblockchain/sandy_log/log"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"tezos_index/common"
 	"tezos_index/puller/index"
 	_ "tezos_index/puller/migration"
@@ -73,10 +75,12 @@ func NewEnvironment() *Environment {
 		log2.Crit("please set redis connection info")
 		panic("system fail")
 	}
+	spl := strings.Split(strings.TrimPrefix(conf.Redis, "redis://"), "/")
+	db, _ := strconv.Atoi(spl[1])
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     conf.Redis,
+		Addr:     spl[0],
 		Password: "",
-		DB:       3,
+		DB:       db,
 	})
 
 	conf.Mysql = viperConfig.GetString(domain, "mysql")
