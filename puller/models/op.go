@@ -51,11 +51,11 @@ type Op struct {
 	DelegateId   AccountID       `gorm:"column:delegate_id"      json:"delegate_id"`             // internal: op delegate for originations and delegations
 	IsInternal   bool            `gorm:"column:is_internal"      json:"is_internal"`             // bc: internal chain/funds management
 	HasData      bool            `gorm:"column:has_data"      json:"has_data"`                   // internal: flag to signal if data is available
-	Data         string          `gorm:"column:data"      json:"data"`                           // bc: extra op data
+	Data         string          `gorm:"column:data;type:BLOB"      json:"data"`                 // bc: extra op data
 	Parameters   []byte          `gorm:"column:parameters;type:BLOB"      json:"parameters"`     // bc: input params
 	Storage      []byte          `gorm:"column:storage;type:BLOB"      json:"storage"`           // bc: result storage
 	BigMapDiff   []byte          `gorm:"column:big_map_diff;type:BLOB"      json:"big_map_diff"` // bc: result big map diff
-	Errors       string          `gorm:"column:errors"      json:"errors"`                       // bc: result errors
+	Errors       string          `gorm:"column:errors;type:BLOB"      json:"errors"`             // bc: result errors
 	TDD          float64         `gorm:"column:days_destroyed"  json:"days_destroyed"`           // stats: token days destroyed
 	BranchId     uint64          `gorm:"column:branch_id"      json:"branch_id"`                 // bc: branch block the op is based on
 	BranchHeight int64           `gorm:"column:branch_height"      json:"branch_height"`         // bc: height of the branch block
