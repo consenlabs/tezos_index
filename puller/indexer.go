@@ -128,6 +128,8 @@ func (m *Indexer) ConnectBlock(ctx context.Context, block *Block, builder BlockB
 		return err
 	}
 
+	var err error
+	tx := m.statedb.Begin()
 	for _, t := range m.indexes {
 		key := t.Key()
 		tip, ok := m.tips[string(key)]
@@ -141,20 +143,38 @@ func (m *Indexer) ConnectBlock(ctx context.Context, block *Block, builder BlockB
 			continue
 		}
 
-		if err := t.ConnectBlock(ctx, block, builder); err != nil {
-			return err
+		err = t.ConnectBlock(ctx, block, builder, tx)
+		if err != nil {
+			break
 		}
+	}
 
-		// Update the current tip.
-		cHash, _ := chain.ParseBlockHash(block.Hash.String())
-		cloned := cHash.Clone()
-		tip.Hash = &cloned
-		tip.Height = block.Height
+	// 获取indexer 的事务，统一处理connectBlock 中的tx, 保证写入操作一致
+	if err != nil {
+		tx.Rollback()
+		return err
+	} else {
+		tx.Commit()
+		// 修改indexer 的tip
+		for _, t := range m.indexes {
+			key := t.Key()
+			tip, ok := m.tips[string(key)]
+			if !ok {
+				continue
+			}
+			// Update the current tip.
+			cHash, _ := chain.ParseBlockHash(block.Hash.String())
+			cloned := cHash.Clone()
+			tip.Hash = &cloned
+			tip.Height = block.Height
+		}
 	}
 	return nil
 }
 
 func (m *Indexer) DisconnectBlock(ctx context.Context, block *Block, builder BlockBuilder, ignoreErrors bool) error {
+	var errs error
+	tx := m.statedb.Begin()
 	for _, t := range m.indexes {
 		key := t.Key()
 		tip, ok := m.tips[string(key)]
@@ -165,20 +185,37 @@ func (m *Indexer) DisconnectBlock(ctx context.Context, block *Block, builder Blo
 		if block.Height > 0 && (tip.Hash.String() != block.Hash.String()) {
 			continue
 		}
-
-		if err := t.DisconnectBlock(ctx, block, builder); err != nil && !ignoreErrors {
-			return err
+		if err := t.DisconnectBlock(ctx, block, builder, tx); err != nil && !ignoreErrors {
+			errs = err
+			break
 		}
+	}
 
-		// Update the current tip.
-		cloned := block.TZ.Parent().Clone()
-		tip.Hash = &cloned
-		tip.Height = block.Height - 1
+	// 获取indexer 的事务，统一处理connectBlock 中的tx, 保证写入操作一致
+	if errs != nil {
+		tx.Rollback()
+		return errs
+	} else {
+		tx.Commit()
+		// 修改indexer 的tip
+		for _, t := range m.indexes {
+			key := t.Key()
+			tip, ok := m.tips[string(key)]
+			if !ok {
+				continue
+			}
+			// Update the current tip.
+			cloned := block.TZ.Parent().Clone()
+			tip.Hash = &cloned
+			tip.Height = block.Height - 1
+		}
 	}
 	return nil
 }
 
 func (m *Indexer) DeleteBlock(ctx context.Context, tz *Bundle) error {
+	var errs error
+	tx := m.statedb.Begin()
 	for _, t := range m.indexes {
 		key := t.Key()
 		tip, ok := m.tips[string(key)]
@@ -189,13 +226,30 @@ func (m *Indexer) DeleteBlock(ctx context.Context, tz *Bundle) error {
 		if tz.Height() != tip.Height {
 			continue
 		}
-		if err := t.DeleteBlock(ctx, tz.Height()); err != nil {
-			return err
+		if err := t.DeleteBlock(ctx, tz.Height(), tx); err != nil {
+			errs = err
+			break
 		}
-		// Update the current tip.
-		cloned := tz.Parent().Clone()
-		tip.Hash = &cloned
-		tip.Height = tz.Height() - 1
+	}
+
+	// 获取indexer 的事务，统一处理connectBlock 中的tx, 保证写入操作一致
+	if errs != nil {
+		tx.Rollback()
+		return errs
+	} else {
+		tx.Commit()
+		// 修改indexer 的tip
+		for _, t := range m.indexes {
+			key := t.Key()
+			tip, ok := m.tips[string(key)]
+			if !ok {
+				continue
+			}
+			// Update the current tip.
+			cloned := tz.Parent().Clone()
+			tip.Hash = &cloned
+			tip.Height = tz.Height() - 1
+		}
 	}
 	return nil
 }

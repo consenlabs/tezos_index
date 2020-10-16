@@ -46,7 +46,7 @@ func (idx *IncomeIndex) Key() string {
 	return IncomeIndexKey
 }
 
-func (idx *IncomeIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *IncomeIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// ignore genesis block
 	if block.Height == 0 {
 		return nil
@@ -55,23 +55,23 @@ func (idx *IncomeIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 	// bootstrap first cycles on first block using all genesis bakers as snapshot proxy
 	// block 1 contains all initial rights, this number is fixed at crawler.go
 	if block.Height == 1 {
-		return idx.BootstrapIncome(ctx, block, builder)
+		return idx.BootstrapIncome(ctx, block, builder, tx)
 	}
 
 	// update expected income/deposits and luck on cycle start when params are known
 	if block.Params.IsCycleStart(block.Height) {
-		if err := idx.UpdateCycleIncome(ctx, block, builder); err != nil {
+		if err := idx.UpdateCycleIncome(ctx, block, builder, tx); err != nil {
 			return err
 		}
 	}
 
 	// update income from flows and rights
-	if err := idx.UpdateBlockIncome(ctx, block, builder, false); err != nil {
+	if err := idx.UpdateBlockIncome(ctx, block, builder, false, tx); err != nil {
 		return err
 	}
 
 	// update burn from nonce revelations, if any
-	if err := idx.UpdateNonceRevelations(ctx, block, builder, false); err != nil {
+	if err := idx.UpdateNonceRevelations(ctx, block, builder, false, tx); err != nil {
 		return err
 	}
 
@@ -80,32 +80,32 @@ func (idx *IncomeIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 		return nil
 	}
 
-	return idx.CreateCycleIncome(ctx, block, builder)
+	return idx.CreateCycleIncome(ctx, block, builder, tx)
 }
 
-func (idx *IncomeIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *IncomeIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// rollback current income
-	if err := idx.UpdateBlockIncome(ctx, block, builder, true); err != nil {
+	if err := idx.UpdateBlockIncome(ctx, block, builder, true, tx); err != nil {
 		return err
 	}
 
 	// update burn from nonce revelations, if any
-	if err := idx.UpdateNonceRevelations(ctx, block, builder, true); err != nil {
+	if err := idx.UpdateNonceRevelations(ctx, block, builder, true, tx); err != nil {
 		return err
 	}
 
 	// new rights are fetched in cycles
 	if block.Params.IsCycleStart(block.Height) {
-		return idx.DeleteCycle(ctx, block.Height)
+		return idx.DeleteCycle(ctx, block.Height, tx)
 	}
 	return nil
 }
 
-func (idx *IncomeIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *IncomeIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	return nil
 }
 
-func (idx *IncomeIndex) BootstrapIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *IncomeIndex) BootstrapIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// on bootstrap use the initial params from block 1
 	p := block.Params
 
@@ -203,14 +203,11 @@ func (idx *IncomeIndex) BootstrapIncome(ctx context.Context, block *models.Block
 			ins[i] = v
 		}
 		// todo batch insert
-		tx := idx.DB().Begin()
 		for _, v := range ins {
 			if err := tx.Create(v).Error; err != nil {
-				tx.Rollback()
 				return err
 			}
 		}
-		tx.Commit()
 	}
 	return nil
 }
@@ -220,7 +217,7 @@ func (idx *IncomeIndex) BootstrapIncome(ctx context.Context, block *models.Block
 //
 // also used to update income after upgrade to v006 for all remaining cycles due
 // to changes in rewards
-func (idx *IncomeIndex) UpdateCycleIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *IncomeIndex) UpdateCycleIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	p := block.Params
 
 	// check pre-conditon and pick cycles to update
@@ -249,7 +246,7 @@ func (idx *IncomeIndex) UpdateCycleIncome(ctx context.Context, block *models.Blo
 		var totalRolls int64
 
 		var ins []*models.Income
-		err := idx.DB().Where("cycle = ?", v).Find(&ins).Error
+		err := tx.Where("cycle = ?", v).Find(&ins).Error
 		if err != nil {
 			return err
 		}
@@ -272,14 +269,11 @@ func (idx *IncomeIndex) UpdateCycleIncome(ctx context.Context, block *models.Blo
 			upd[i] = v
 		}
 		// todo batch update
-		tx := idx.DB().Begin()
 		for _, v := range upd {
 			if err := updateThisInc(v, tx); err != nil {
-				tx.Rollback()
 				return err
 			}
 		}
-		tx.Commit()
 	}
 	return nil
 }
@@ -294,7 +288,7 @@ func updateThisInc(upc *models.Income, db *gorm.DB) error {
 	return db.Model(&models.Income{}).Where("row_id = ?", upc.RowId).Updates(data).Error
 }
 
-func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	p := block.Params
 	sn := block.TZ.Snapshot
 	incomeMap := make(map[models.AccountID]*models.Income)
@@ -330,7 +324,7 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 		// FIXME: params should come from the future cycle
 		// p := builder.Registry().GetParamsByHeight(block.Params.CycleStartHeight(sn.Cycle))
 		var ss []*models.Snapshot
-		err := idx.DB().Where("cycle = ? and s_index = ? and is_active = ?",
+		err := tx.Where("cycle = ? and s_index = ? and is_active = ?",
 			sn.Cycle-(p.PreservedCycles+2), sn.RollSnapshot, true).Find(&ss).Error
 		if err != nil {
 			return err
@@ -405,7 +399,7 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 	}
 	// load endorse rights for last block of previous cycle
 	var rights []*models.Right
-	err := idx.DB().Where("height = ? and type = ?", endorseStartBlock, int64(chain.RightTypeEndorsing)).Find(&rights).Error
+	err := tx.Where("height = ? and type = ?", endorseStartBlock, int64(chain.RightTypeEndorsing)).Find(&rights).Error
 	if err != nil {
 		return err
 	}
@@ -415,7 +409,7 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 		ic, ok := incomeMap[right.AccountId]
 		if !ok {
 			// load prev data
-			ic, err = idx.loadIncome(ctx, right.Cycle, right.AccountId)
+			ic, err = idx.loadIncome(ctx, right.Cycle, right.AccountId, tx)
 			if err != nil {
 				return fmt.Errorf("income: missing income data for prev cycle endorser %d at %d[%d]",
 					right.AccountId, sn.Cycle, sn.RollSnapshot)
@@ -449,18 +443,15 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 
 	// cast into insertion slice
 	// todo batch insert
-	tx := idx.DB().Begin()
 	for _, v := range inc {
 		if err := tx.Create(v).Error; err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 	return nil
 }
 
-func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder, isRollback bool) error {
+func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Block, builder models.BlockBuilder, isRollback bool, tx *gorm.DB) error {
 	var err error
 	p := block.Params
 	incomeMap := make(map[models.AccountID]*models.Income)
@@ -479,7 +470,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 		// fetch baker from map
 		in, ok := incomeMap[f.AccountId]
 		if !ok {
-			in, err = idx.loadIncome(ctx, block.Cycle, f.AccountId)
+			in, err = idx.loadIncome(ctx, block.Cycle, f.AccountId, tx)
 			if err != nil {
 				return fmt.Errorf("income: unknown baker %d", f.AccountId)
 			}
@@ -506,7 +497,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 						}
 						loser, ok := incomeMap[v.AccountId]
 						if !ok {
-							loser, err = idx.loadIncome(ctx, block.Cycle, v.AccountId)
+							loser, err = idx.loadIncome(ctx, block.Cycle, v.AccountId, tx)
 							if err != nil {
 								return fmt.Errorf("income: unknown losing baker %d", v.AccountId)
 							}
@@ -541,7 +532,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 			// debit receiver
 			in, ok = incomeMap[f.AccountId]
 			if !ok {
-				in, err = idx.loadIncome(ctx, block.Cycle, f.AccountId)
+				in, err = idx.loadIncome(ctx, block.Cycle, f.AccountId, tx)
 				if err != nil {
 					return fmt.Errorf("income: unknown 2bake/2endorse offender %d", f.AccountId)
 				}
@@ -572,7 +563,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 	if block.BakerId > 0 {
 		baker, ok := incomeMap[block.BakerId]
 		if !ok {
-			baker, err = idx.loadIncome(ctx, block.Cycle, block.BakerId)
+			baker, err = idx.loadIncome(ctx, block.Cycle, block.BakerId, tx)
 			if err != nil {
 				return fmt.Errorf("income: unknown baker %d", block.BakerId)
 			}
@@ -590,7 +581,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 				}
 				loser, ok := incomeMap[v.AccountId]
 				if !ok {
-					loser, err = idx.loadIncome(ctx, block.Cycle, v.AccountId)
+					loser, err = idx.loadIncome(ctx, block.Cycle, v.AccountId, tx)
 					if err != nil {
 						return fmt.Errorf("income: unknown losing baker %d", v.AccountId)
 					}
@@ -608,7 +599,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 			// credit sender
 			in, ok := incomeMap[op.SenderId]
 			if !ok {
-				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId)
+				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId, tx)
 				if err != nil {
 					return fmt.Errorf("income: unknown seeder %d", op.SenderId)
 				}
@@ -620,7 +611,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 			// credit sender
 			in, ok := incomeMap[op.SenderId]
 			if !ok {
-				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId)
+				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId, tx)
 				if err != nil {
 					return fmt.Errorf("income: unknown endorser %d", op.SenderId)
 				}
@@ -633,7 +624,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 			// credit sender
 			in, ok := incomeMap[op.SenderId]
 			if !ok {
-				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId)
+				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId, tx)
 				if err != nil {
 					return fmt.Errorf("income: unknown 2bake accuser %d", op.SenderId)
 				}
@@ -647,7 +638,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 			// credit sender
 			in, ok := incomeMap[op.SenderId]
 			if !ok {
-				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId)
+				in, err = idx.loadIncome(ctx, block.Cycle, op.SenderId, tx)
 				if err != nil {
 					return fmt.Errorf("income: unknown 2endorse accuser %d", op.SenderId)
 				}
@@ -673,7 +664,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 			}
 			in, ok := incomeMap[v.AccountId]
 			if !ok {
-				in, err = idx.loadIncome(ctx, block.Cycle, v.AccountId)
+				in, err = idx.loadIncome(ctx, block.Cycle, v.AccountId, tx)
 				if err != nil {
 					return fmt.Errorf("income: unknown missed endorser %d", v.AccountId)
 				}
@@ -708,14 +699,11 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 		upd = append(upd, v)
 	}
 	// todo batch update
-	tx := idx.DB().Begin()
 	for _, v := range upd {
 		if err := updateIncome(v, tx); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 	return nil
 }
 
@@ -763,7 +751,7 @@ func updateIncome(inc *models.Income, db *gorm.DB) error {
 	return db.Model(&models.Income{}).Where("row_id = ?", inc.RowId).Updates(data).Error
 }
 
-func (idx *IncomeIndex) UpdateNonceRevelations(ctx context.Context, block *models.Block, builder models.BlockBuilder, isRollback bool) error {
+func (idx *IncomeIndex) UpdateNonceRevelations(ctx context.Context, block *models.Block, builder models.BlockBuilder, isRollback bool, tx *gorm.DB) error {
 	cycle := block.Cycle - 1
 	if cycle < 0 {
 		return nil
@@ -783,7 +771,7 @@ func (idx *IncomeIndex) UpdateNonceRevelations(ctx context.Context, block *model
 		// find and update the income row
 		in, ok := incomeMap[f.AccountId]
 		if !ok {
-			in, err = idx.loadIncome(ctx, cycle, f.AccountId)
+			in, err = idx.loadIncome(ctx, cycle, f.AccountId, tx)
 			if err != nil {
 				return fmt.Errorf("income: unknown seed nonce baker %d", f.AccountId)
 			}
@@ -822,14 +810,11 @@ func (idx *IncomeIndex) UpdateNonceRevelations(ctx context.Context, block *model
 		upd = append(upd, v)
 	}
 	// todo batch update
-	tx := idx.DB().Begin()
 	for _, v := range upd {
 		if err := updateThisIncome(v, tx); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 	return nil
 }
 
@@ -844,20 +829,20 @@ func updateThisIncome(inc *models.Income, db *gorm.DB) error {
 	return db.Model(&models.Income{}).Where("row_id = ?", inc.RowId).Updates(data).Error
 }
 
-func (idx *IncomeIndex) DeleteCycle(ctx context.Context, cycle int64) error {
+func (idx *IncomeIndex) DeleteCycle(ctx context.Context, cycle int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting income for cycle %d", cycle)
 
-	err := idx.DB().Where("cycle = ?", cycle).Delete(&models.Income{}).Error
+	err := tx.Where("cycle = ?", cycle).Delete(&models.Income{}).Error
 	return err
 }
 
-func (idx *IncomeIndex) loadIncome(ctx context.Context, cycle int64, id models.AccountID) (*models.Income, error) {
+func (idx *IncomeIndex) loadIncome(ctx context.Context, cycle int64, id models.AccountID, tx *gorm.DB) (*models.Income, error) {
 	if cycle < 0 && id <= 0 {
 		return nil, ErrNoIncomeEntry
 	}
 
 	in := &models.Income{}
-	err := idx.DB().Where("cycle = ? and account_id = ?", cycle, id.Value()).Last(in).Error
+	err := tx.Where("cycle = ? and account_id = ?", cycle, id.Value()).Last(in).Error
 	if err != nil {
 		return nil, ErrNoIncomeEntry
 	}

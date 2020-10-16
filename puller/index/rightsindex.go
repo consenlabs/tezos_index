@@ -32,7 +32,7 @@ func (idx *RightsIndex) Key() string {
 	return RightsIndexKey
 }
 
-func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	upd := make([]*models.Right, 0, 32+block.Priority+block.NSeedNonce)
 	// load and update rights when seed nonces are published
 	if block.NSeedNonce > 0 {
@@ -53,7 +53,7 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 			// from another baker who was required to publish them as message into the
 			// network
 			var updd []*models.Right
-			err := idx.DB().Where("height = ? and type = ? and is_seed_required = ?",
+			err := tx.Where("height = ? and type = ? and is_seed_required = ?",
 				sop.Level, int64(chain.RightTypeBaking), true).Find(&updd).Error
 			if err != nil {
 				return fmt.Errorf("rights: seed nonce right %s %d: %v", block.Baker, sop.Level, err)
@@ -97,14 +97,11 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 	}
 
 	// todo batch update
-	tx := idx.DB().Begin()
 	for _, up := range upd {
 		if err := models.UpdateRight(up, tx); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 
 	// nothing more to do when no new rights are available
 	if len(block.TZ.Baking) == 0 && len(block.TZ.Endorsing) == 0 {
@@ -160,7 +157,7 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 	}
 
 	// // todo batch insert 弃用
-	// tx = idx.DB().Begin()
+	// tx = tx.Begin()
 	// for _, v := range ins {
 	// 	if err := tx.Create(v).Error; err != nil {
 	// 		tx.Rollback()
@@ -172,7 +169,7 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 	// 批量插入right
 	if len(ins) != 0 {
 		batch := 200
-		if err := BatchInsertRights(ins, batch, idx.DB()); err != nil {
+		if err := BatchInsertRights(ins, batch, tx); err != nil {
 			log.Errorf("batch insert rights error: %v", err)
 			return err
 		}
@@ -181,7 +178,6 @@ func (idx *RightsIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 }
 
 func BatchInsertRights(records []*models.Right, batch int, db *gorm.DB) error {
-	tx := db.Begin()
 	if batch == 0 {
 		batch = 1
 	}
@@ -191,8 +187,7 @@ func BatchInsertRights(records []*models.Right, batch int, db *gorm.DB) error {
 		if index > 0 && index%batch == 0 || index == len(records)-1 {
 			val += fmt.Sprintf("(%d,%d,%d,%d,%d,%t,%t,%t,%t,%t);", value.Type, value.Height, value.Cycle, value.Priority, value.AccountId,
 				value.IsLost, value.IsStolen, value.IsMissed, value.IsSeedRequired, value.IsSeedRevealed)
-			if err := tx.Exec(sql + val).Error; err != nil {
-				tx.Rollback()
+			if err := db.Exec(sql + val).Error; err != nil {
 				return err
 			}
 			val = ""
@@ -201,11 +196,10 @@ func BatchInsertRights(records []*models.Right, batch int, db *gorm.DB) error {
 				value.IsLost, value.IsStolen, value.IsMissed, value.IsSeedRequired, value.IsSeedRevealed)
 		}
 	}
-	tx.Commit()
 	return nil
 }
 
-func (idx *RightsIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *RightsIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// reverse right updates
 	upd := make([]*models.Right, 0, 32+block.Priority+block.NSeedNonce)
 	// load and update rights when seed nonces are published
@@ -226,7 +220,7 @@ func (idx *RightsIndex) DisconnectBlock(ctx context.Context, block *models.Block
 			// seed nonces are injected by the current block's baker!
 			// we assume each baker has only one priority level per block
 			var tmps []*models.Right
-			err := idx.DB().Where("height = ? and type = ? and account_id = ?",
+			err := tx.Where("height = ? and type = ? and account_id = ?",
 				sop.Level, int64(chain.RightTypeBaking), block.Baker.RowId.Value()).Find(&tmps).Error
 			if err != nil {
 				return fmt.Errorf("rights: seed nonce right %s %d: %v", block.Baker, sop.Level, err)
@@ -257,27 +251,24 @@ func (idx *RightsIndex) DisconnectBlock(ctx context.Context, block *models.Block
 	}
 
 	// todo batch update
-	tx := idx.DB().Begin()
 	for _, val := range upd {
 		if err := models.UpdateRight(val, tx); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 
 	// new rights are fetched in cycles
 	if block.Params.IsCycleStart(block.Height) {
-		return idx.DeleteCycle(ctx, block.Height)
+		return idx.DeleteCycle(ctx, block.Height, tx)
 	}
 	return nil
 }
 
-func (idx *RightsIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *RightsIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	return nil
 }
 
-func (idx *RightsIndex) DeleteCycle(ctx context.Context, cycle int64) error {
+func (idx *RightsIndex) DeleteCycle(ctx context.Context, cycle int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting rights for cycle %d", cycle)
-	return idx.DB().Where("cycle = ?", cycle).Delete(&models.Right{}).Error
+	return tx.Where("cycle = ?", cycle).Delete(&models.Right{}).Error
 }

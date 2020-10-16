@@ -28,28 +28,25 @@ func (idx *FlowIndex) Key() string {
 	return FlowIndexKey
 }
 
-func (idx *FlowIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
+func (idx *FlowIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
 	flows := make([]*models.Flow, 0, len(block.Flows))
 	for _, f := range block.Flows {
 		flows = append(flows, f)
 	}
 	// todo batch insert
-	tx := idx.DB().Begin()
 	for _, f := range block.Flows {
 		if err := tx.Create(f).Error; err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 	return nil
 }
 
-func (idx *FlowIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DeleteBlock(ctx, block.Height)
+func (idx *FlowIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *FlowIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *FlowIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting flows at height %d", height)
-	return idx.DB().Where("height = ? ", height).Delete(&models.Flow{}).Error
+	return tx.Where("height = ? ", height).Delete(&models.Flow{}).Error
 }

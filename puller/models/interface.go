@@ -63,15 +63,15 @@ type BlockIndexer interface {
 
 	// ConnectBlock is invoked when the table manager is notified that a new
 	// block has been connected to the main chain.
-	ConnectBlock(ctx context.Context, block *Block, builder BlockBuilder) error
+	ConnectBlock(ctx context.Context, block *Block, builder BlockBuilder, tx *gorm.DB) error
 
 	// DisconnectBlock is invoked when the table manager is notified that a
 	// block has been disconnected from the main chain.
-	DisconnectBlock(ctx context.Context, block *Block, builder BlockBuilder) error
+	DisconnectBlock(ctx context.Context, block *Block, builder BlockBuilder, tx *gorm.DB) error
 
 	// DeleteBlock is invoked when the table manager is notified that a
 	// block must be rolled back after an error occured.
-	DeleteBlock(ctx context.Context, height int64) error
+	DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error
 
 	// returns the database storing all indexer tables
 	DB() *gorm.DB

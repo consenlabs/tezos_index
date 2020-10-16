@@ -56,7 +56,7 @@ func (idx *GovIndex) Key() string {
 	return GovIndexKey
 }
 
-func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// skip genesis and bootstrap blocks
 	if block.Height < firstVoteBlock {
 		return nil
@@ -69,12 +69,12 @@ func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, buil
 	// open a new election or vote on first block
 	if isPeriodStart {
 		if block.VotingPeriodKind == chain.VotingPeriodProposal {
-			if err := idx.openElection(ctx, block, builder); err != nil {
+			if err := idx.openElection(ctx, block, builder, tx); err != nil {
 				log.Errorf("Open election at block %d %s: %v", block.Height, block.VotingPeriodKind, err)
 				return err
 			}
 		}
-		if err := idx.openVote(ctx, block, builder); err != nil {
+		if err := idx.openVote(ctx, block, builder, tx); err != nil {
 			log.Errorf("Open vote at block %d %s: %v", block.Height, block.VotingPeriodKind, err)
 			return err
 		}
@@ -84,13 +84,13 @@ func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, buil
 	var err error
 	switch block.VotingPeriodKind {
 	case chain.VotingPeriodProposal:
-		err = idx.processProposals(ctx, block, builder)
+		err = idx.processProposals(ctx, block, builder, tx)
 	case chain.VotingPeriodTestingVote:
-		err = idx.processBallots(ctx, block, builder)
+		err = idx.processBallots(ctx, block, builder, tx)
 	case chain.VotingPeriodTesting:
 		// nothing to do here
 	case chain.VotingPeriodPromotionVote:
-		err = idx.processBallots(ctx, block, builder)
+		err = idx.processBallots(ctx, block, builder, tx)
 	}
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, buil
 	// close any previous period after last block
 	if isPeriodEnd {
 		// close the last vote
-		success, err := idx.closeVote(ctx, block, builder)
+		success, err := idx.closeVote(ctx, block, builder, tx)
 		if err != nil {
 			log.Errorf("Close %s vote at block %d: %v", block.VotingPeriodKind, block.Height, err)
 			return err
@@ -107,7 +107,7 @@ func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, buil
 
 		// on failure or on end, close last election
 		if !success || block.VotingPeriodKind == chain.VotingPeriodProposal {
-			if err := idx.closeElection(ctx, block, builder); err != nil {
+			if err := idx.closeElection(ctx, block, builder, tx); err != nil {
 				log.Errorf("Close election at block %d: %v", block.Height, err)
 				return err
 			}
@@ -116,34 +116,34 @@ func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, buil
 	return nil
 }
 
-func (idx *GovIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DeleteBlock(ctx, block.Height)
+func (idx *GovIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *GovIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *GovIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	// delete ballots by height
-	if err := idx.DB().Where("height = ?", height).Delete(&models.Ballot{}).Error; err != nil {
+	if err := tx.Where("height = ?", height).Delete(&models.Ballot{}).Error; err != nil {
 		return nil
 	}
 
 	// delete proposals by height
-	if err := idx.DB().Where("height = ?", height).Delete(&models.Proposal{}).Error; err != nil {
+	if err := tx.Where("height = ?", height).Delete(&models.Proposal{}).Error; err != nil {
 		return nil
 	}
 
 	// on vote period start, delete vote by start height
-	if err := idx.DB().Where("period_start_height = ?", height).Delete(&models.Vote{}).Error; err != nil {
+	if err := tx.Where("period_start_height = ?", height).Delete(&models.Vote{}).Error; err != nil {
 		return nil
 	}
 
 	// on election start, delete election (maybe not because we use row id as counter)
-	if err := idx.DB().Where("start_height = ?", height).Delete(&models.Election{}).Error; err != nil {
+	if err := tx.Where("start_height = ?", height).Delete(&models.Election{}).Error; err != nil {
 		return nil
 	}
 	return nil
 }
 
-func (idx *GovIndex) openElection(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *GovIndex) openElection(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	election := &models.Election{
 		NumPeriods:   1,
 		VotingPeriod: block.TZ.Block.Metadata.Level.VotingPeriod,
@@ -158,12 +158,12 @@ func (idx *GovIndex) openElection(ctx context.Context, block *models.Block, buil
 		NoMajority:   false,
 	}
 
-	return idx.DB().Create(election).Error
+	return tx.Create(election).Error
 }
 
-func (idx *GovIndex) closeElection(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *GovIndex) closeElection(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// load current election
-	election, err := idx.electionByHeight(ctx, block.Height, block.Params)
+	election, err := idx.electionByHeight(ctx, block.Height, block.Params, tx)
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (idx *GovIndex) closeElection(ctx context.Context, block *models.Block, bui
 		return fmt.Errorf("closing election: election %d already closed", election.RowId)
 	}
 	// load current vote
-	vote, err := idx.voteByHeight(ctx, block.Height, block.Params)
+	vote, err := idx.voteByHeight(ctx, block.Height, block.Params, tx)
 	if err != nil {
 		return err
 	}
@@ -188,12 +188,12 @@ func (idx *GovIndex) closeElection(ctx context.Context, block *models.Block, bui
 	election.NoQuorum = vote.NoQuorum
 	election.NoMajority = vote.NoMajority
 
-	return models.UpdateElection(election, idx.DB())
+	return models.UpdateElection(election, tx)
 }
 
-func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// load current election, must exist
-	election, err := idx.electionByHeight(ctx, block.Height, block.Params)
+	election, err := idx.electionByHeight(ctx, block.Height, block.Params, tx)
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder 
 		vote.QuorumPct = 0
 	case chain.VotingPeriodTestingVote, chain.VotingPeriodPromotionVote:
 		// from most recent (testing_vote or promotion_vote) period
-		quorumPct, turnoutEma, err := idx.quorumByHeight(ctx, block.Height, p)
+		quorumPct, turnoutEma, err := idx.quorumByHeight(ctx, block.Height, p, tx)
 		if err != nil {
 			return err
 		}
@@ -254,17 +254,17 @@ func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder 
 	vote.QuorumRolls = vote.EligibleRolls * vote.QuorumPct / 10000
 
 	// insert vote
-	if err := idx.DB().Create(vote).Error; err != nil {
+	if err := tx.Create(vote).Error; err != nil {
 		return err
 	}
 
 	// update election
-	return models.UpdateElection(election, idx.DB())
+	return models.UpdateElection(election, tx)
 }
 
-func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder models.BlockBuilder) (bool, error) {
+func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) (bool, error) {
 	// load current vote
-	vote, err := idx.voteByHeight(ctx, block.Height, block.Params)
+	vote, err := idx.voteByHeight(ctx, block.Height, block.Params, tx)
 	if err != nil {
 		return false, err
 	}
@@ -280,7 +280,7 @@ func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder
 		// select the winning proposal if any and update election
 		var isDraw bool
 		if vote.TurnoutRolls > 0 {
-			proposals, err := idx.proposalsByElection(ctx, vote.ElectionId)
+			proposals, err := idx.proposalsByElection(ctx, vote.ElectionId, tx)
 			if err != nil {
 				return false, err
 			}
@@ -305,13 +305,13 @@ func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder
 
 			if !isDraw {
 				// load current election, must exist
-				election, err := idx.electionByHeight(ctx, block.Height, block.Params)
+				election, err := idx.electionByHeight(ctx, block.Height, block.Params, tx)
 				if err != nil {
 					return false, err
 				}
 				// store winner and update election
 				election.ProposalId = winner
-				if err := models.UpdateElection(election, idx.DB()); err != nil {
+				if err := models.UpdateElection(election, tx); err != nil {
 					return false, err
 				}
 				vote.ProposalId = winner
@@ -334,7 +334,7 @@ func (idx *GovIndex) closeVote(ctx context.Context, block *models.Block, builder
 	vote.EndTime = block.Timestamp
 	vote.IsOpen = false
 
-	if err := updateThisVote(vote, idx.DB()); err != nil {
+	if err := updateThisVote(vote, tx); err != nil {
 		return false, err
 	}
 
@@ -355,20 +355,20 @@ func updateThisVote(v *models.Vote, db *gorm.DB) error {
 	return db.Model(&models.Vote{}).Where("row_id = ?", v.RowId).Updates(data).Error
 }
 
-func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// skip blocks without proposals
 	if block.NProposal == 0 {
 		return nil
 	}
 
 	// load current vote
-	vote, err := idx.voteByHeight(ctx, block.Height, block.Params)
+	vote, err := idx.voteByHeight(ctx, block.Height, block.Params, tx)
 	if err != nil {
 		return err
 	}
 
 	// load known proposals
-	proposals, err := idx.proposalsByElection(ctx, vote.ElectionId)
+	proposals, err := idx.proposalsByElection(ctx, vote.ElectionId, tx)
 	if err != nil {
 		return err
 	}
@@ -415,20 +415,17 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 	// insert unknown proposals to create ids
 	if len(insProposals) > 0 {
 		// todo batch insert
-		tx := idx.DB().Begin()
 		for _, val := range insProposals {
 			if err := tx.Create(val).Error; err != nil {
-				tx.Rollback()
 				return err
 			}
 		}
-		tx.Commit()
 
 		for _, p := range insProposals {
 			proposalMap[p.Hash.String()] = p
 		}
 		// update election, counting proposals
-		election, err := idx.electionByHeight(ctx, block.Height, block.Params)
+		election, err := idx.electionByHeight(ctx, block.Height, block.Params, tx)
 		if err != nil {
 			return err
 		}
@@ -438,7 +435,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 		}
 		election.IsEmpty = false
 		election.NumProposals += len(insProposals)
-		if err := models.UpdateElection(election, idx.db); err != nil {
+		if err := models.UpdateElection(election, tx); err != nil {
 			return err
 		}
 	}
@@ -462,7 +459,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 			return fmt.Errorf("missing account %s in proposal op [%d:%d]", pop.Source, op.OpN, op.OpC)
 		}
 		// load account rolls at snapshot block (i.e. at current voting period start - 1)
-		rolls, err := idx.rollsByHeight(ctx, acc.RowId, vote.StartHeight-1)
+		rolls, err := idx.rollsByHeight(ctx, acc.RowId, vote.StartHeight-1, tx)
 		if err != nil {
 			return fmt.Errorf("missing roll snapshot for %s in vote period %d (%s) start %d",
 				acc, vote.VotingPeriod, vote.VotingPeriodKind, vote.StartHeight)
@@ -480,7 +477,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 			}
 
 			var cnt int
-			err := idx.DB().Model(&models.Ballot{}).Where("source_id = ? and voting_period = ? and proposal_id = ?",
+			err := tx.Model(&models.Ballot{}).Where("source_id = ? and voting_period = ? and proposal_id = ?",
 				acc.RowId.Value(), vote.VotingPeriod, prop.RowId.Value()).Count(&cnt).Error
 			if err != nil && err != gorm.ErrRecordNotFound {
 				return err
@@ -511,7 +508,7 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 
 		// update vote, skip when the same account voted already
 		var cnt int
-		err = idx.DB().Model(&models.Ballot{}).Where("source_id = ? and voting_period = ?", acc.RowId.Value(), vote.VotingPeriod).Count(&cnt).Error
+		err = tx.Model(&models.Ballot{}).Where("source_id = ? and voting_period = ?", acc.RowId.Value(), vote.VotingPeriod).Count(&cnt).Error
 		if err != nil && err != gorm.ErrRecordNotFound {
 			return err
 		} else if cnt == 0 {
@@ -528,12 +525,12 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 	if vote.EligibleRolls == 0 {
 		vote.EligibleRolls = block.Chain.Rolls
 		vote.EligibleVoters = block.Chain.RollOwners
-		vote.QuorumPct, _, _ = idx.quorumByHeight(ctx, block.Height, block.Params)
+		vote.QuorumPct, _, _ = idx.quorumByHeight(ctx, block.Height, block.Params, tx)
 	}
 
 	// finalize vote for this round and safe
 	vote.TurnoutPct = vote.TurnoutRolls * 10000 / vote.EligibleRolls
-	if err := updateThisVot(vote, idx.DB()); err != nil {
+	if err := updateThisVot(vote, tx); err != nil {
 		return err
 	}
 
@@ -543,16 +540,13 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 		insProposals = append(insProposals, v)
 	}
 	//  todo batch update
-	tx := idx.DB().Begin()
 	for _, v := range insProposals {
 		if err := models.UpdateProposal(v, tx); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 
-	return idx.DB().Create(insBallots).Error
+	return tx.Create(insBallots).Error
 }
 
 func updateThisVot(v *models.Vote, db *gorm.DB) error {
@@ -566,14 +560,14 @@ func updateThisVot(v *models.Vote, db *gorm.DB) error {
 	return db.Model(&models.Vote{}).Where("row_id = ?", v.RowId).Updates(data).Error
 }
 
-func (idx *GovIndex) processBallots(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *GovIndex) processBallots(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// skip blocks without ballots
 	if block.NBallot == 0 {
 		return nil
 	}
 
 	// load current vote
-	vote, err := idx.voteByHeight(ctx, block.Height, block.Params)
+	vote, err := idx.voteByHeight(ctx, block.Height, block.Params, tx)
 	if err != nil {
 		return err
 	}
@@ -596,7 +590,7 @@ func (idx *GovIndex) processBallots(ctx context.Context, block *models.Block, bu
 			return fmt.Errorf("missing account %s in proposal op [%d:%d]", bop.Source, op.OpN, op.OpC)
 		}
 		// load account rolls at snapshot block (i.e. at current voting period start - 1)
-		rolls, err := idx.rollsByHeight(ctx, acc.RowId, vote.StartHeight-1)
+		rolls, err := idx.rollsByHeight(ctx, acc.RowId, vote.StartHeight-1, tx)
 		if err != nil {
 			return fmt.Errorf("missing roll snapshot for %s in vote period %d (%s) start %d",
 				acc, vote.VotingPeriod, vote.VotingPeriodKind, vote.StartHeight)
@@ -640,16 +634,16 @@ func (idx *GovIndex) processBallots(ctx context.Context, block *models.Block, bu
 	if vote.EligibleRolls == 0 {
 		vote.EligibleRolls = block.Chain.Rolls
 		vote.EligibleVoters = block.Chain.RollOwners
-		vote.QuorumPct, _, _ = idx.quorumByHeight(ctx, block.Height, block.Params)
+		vote.QuorumPct, _, _ = idx.quorumByHeight(ctx, block.Height, block.Params, tx)
 	}
 
 	// finalize vote for this round and safe
 	vote.TurnoutPct = vote.TurnoutRolls * 10000 / vote.EligibleRolls
-	if err := updateTheVot(vote, idx.db); err != nil {
+	if err := updateTheVot(vote, tx); err != nil {
 		return err
 	}
 
-	return idx.DB().Create(insBallots).Error
+	return tx.Create(insBallots).Error
 }
 
 func updateTheVot(v *models.Vote, db *gorm.DB) error {
@@ -669,9 +663,9 @@ func updateTheVot(v *models.Vote, db *gorm.DB) error {
 	return db.Model(&models.Vote{}).Where("row_id = ?", v.RowId).Updates(data).Error
 }
 
-func (idx *GovIndex) electionByHeight(ctx context.Context, height int64, params *chain.Params) (*models.Election, error) {
+func (idx *GovIndex) electionByHeight(ctx context.Context, height int64, params *chain.Params, tx *gorm.DB) (*models.Election, error) {
 	election := &models.Election{}
-	err := idx.DB().Where("start_height <= ?", height).Last(election).Error
+	err := tx.Where("start_height <= ?", height).Last(election).Error
 	if err != nil {
 		return nil, err
 	}
@@ -681,9 +675,9 @@ func (idx *GovIndex) electionByHeight(ctx context.Context, height int64, params 
 	return election, nil
 }
 
-func (idx *GovIndex) voteByHeight(ctx context.Context, height int64, params *chain.Params) (*models.Vote, error) {
+func (idx *GovIndex) voteByHeight(ctx context.Context, height int64, params *chain.Params, tx *gorm.DB) (*models.Vote, error) {
 	vote := &models.Vote{}
-	err := idx.DB().Where("period_start_height <= ?", height).Last(vote).Error
+	err := tx.Where("period_start_height <= ?", height).Last(vote).Error
 	if err != nil {
 		return nil, err
 	}
@@ -693,27 +687,27 @@ func (idx *GovIndex) voteByHeight(ctx context.Context, height int64, params *cha
 	return vote, nil
 }
 
-func (idx *GovIndex) proposalsByElection(ctx context.Context, eid models.ElectionID) ([]*models.Proposal, error) {
+func (idx *GovIndex) proposalsByElection(ctx context.Context, eid models.ElectionID, tx *gorm.DB) ([]*models.Proposal, error) {
 	var proposals []*models.Proposal
-	err := idx.DB().Where("election_id = ?", eid.Value()).Find(&proposals).Error
+	err := tx.Where("election_id = ?", eid.Value()).Find(&proposals).Error
 	if err != nil {
 		return nil, err
 	}
 	return proposals, nil
 }
 
-func (idx *GovIndex) ballotsByVote(ctx context.Context, period int64) ([]*models.Ballot, error) {
+func (idx *GovIndex) ballotsByVote(ctx context.Context, period int64, tx *gorm.DB) ([]*models.Ballot, error) {
 	var ballots []*models.Ballot
-	err := idx.DB().Where("voting_period = ?", period).Find(&ballots).Error
+	err := tx.Where("voting_period = ?", period).Find(&ballots).Error
 	if err != nil {
 		return nil, err
 	}
 	return ballots, nil
 }
 
-func (idx *GovIndex) rollsByHeight(ctx context.Context, aid models.AccountID, height int64) (int64, error) {
+func (idx *GovIndex) rollsByHeight(ctx context.Context, aid models.AccountID, height int64, tx *gorm.DB) (int64, error) {
 	xr := &models.Snapshot{}
-	err := idx.DB().Select("rolls").Where("height = ? and account_id = ?", height, aid.Value()).Last(xr).Error
+	err := tx.Select("rolls").Where("height = ? and account_id = ?", height, aid.Value()).Last(xr).Error
 	if err != nil {
 		return 0, err
 	}
@@ -722,12 +716,12 @@ func (idx *GovIndex) rollsByHeight(ctx context.Context, aid models.AccountID, he
 
 // quorums adjust at the end of each exploration & promotion voting period
 // starting in v005 the algorithm changes to track participation as EMA (80/20)
-func (idx *GovIndex) quorumByHeight(ctx context.Context, height int64, params *chain.Params) (int64, int64, error) {
+func (idx *GovIndex) quorumByHeight(ctx context.Context, height int64, params *chain.Params, tx *gorm.DB) (int64, int64, error) {
 	// find most recent exploration or promotion period
 	var lastQuorum, lastTurnout, lastTurnoutEma, nextQuorum, nextEma int64
 	var votes []*models.Vote
 	// todo 顺序可能有问题
-	err := idx.DB().Where("period_start_height < ?", height).Order("row_id desc").Find(&votes).Error // stream
+	err := tx.Where("period_start_height < ?", height).Order("row_id desc").Find(&votes).Error // stream
 	if err != nil {
 		return 0, 0, err
 	}

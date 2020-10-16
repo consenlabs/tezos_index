@@ -44,29 +44,26 @@ func (idx *OpIndex) Key() string {
 	return OpIndexKey
 }
 
-func (idx *OpIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
+func (idx *OpIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
 	ops := make([]*models.Op, 0, len(block.Ops))
 	for _, op := range block.Ops {
 		ops = append(ops, op)
 	}
 	// todo batch insert
-	tx := idx.DB().Begin()
 	for _, op := range ops {
 		if err := tx.Create(op).Error; err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 	return nil
 }
 
-func (idx *OpIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DeleteBlock(ctx, block.Height)
+func (idx *OpIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *OpIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *OpIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting ops at height %d", height)
 
-	return idx.DB().Where("height = ?", height).Delete(&models.Op{}).Error
+	return tx.Where("height = ?", height).Delete(&models.Op{}).Error
 }

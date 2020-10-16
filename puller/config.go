@@ -135,10 +135,10 @@ func (e *Environment) NewPuller() *Crawler {
 			index.NewChainIndex(e.Engine),
 			index.NewSupplyIndex(e.Engine),
 			index.NewRightsIndex(e.Engine),
-			index.NewSnapshotIndex(e.Engine),
+			index.NewSnapshotIndex(e.Engine), // 需要脏读 account
 			index.NewIncomeIndex(e.Engine),
 			index.NewGovIndex(e.Engine),
-			index.NewBigMapIndex(e.Engine),
+			index.NewBigMapIndex(e.Engine), // 需要脏读contract
 		},
 	})
 
@@ -148,7 +148,7 @@ func (e *Environment) NewPuller() *Crawler {
 		Client:        e.Client,
 		Queue:         4,
 		StopBlock:     0,
-		EnableMonitor: false,
+		EnableMonitor: true, // 等同步到最新区块之后则开启 monitor
 	}
 	return NewCrawler(cf)
 }
