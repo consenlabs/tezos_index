@@ -545,8 +545,12 @@ func (idx *GovIndex) processProposals(ctx context.Context, block *models.Block, 
 			return err
 		}
 	}
-
-	return tx.Create(insBallots).Error
+	for _, ball := range insBallots {
+		if err := tx.Create(ball).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func updateThisVot(v *models.Vote, db *gorm.DB) error {
@@ -643,7 +647,12 @@ func (idx *GovIndex) processBallots(ctx context.Context, block *models.Block, bu
 		return err
 	}
 
-	return tx.Create(insBallots).Error
+	for _, ball := range insBallots {
+		if err := tx.Create(ball).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func updateTheVot(v *models.Vote, db *gorm.DB) error {
