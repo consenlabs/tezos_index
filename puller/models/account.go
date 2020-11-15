@@ -287,8 +287,13 @@ func (a *Account) UpdateBalance(f *Flow) error {
 		a.FrozenFees += f.AmountIn - f.AmountOut
 	case FlowCategoryBalance:
 		if a.SpendableBalance < f.AmountOut {
-			return fmt.Errorf("acc.update id %d %s balance %d is smaller than "+
-				"outgoing amount %d", a.RowId, a, a.SpendableBalance, f.AmountOut)
+			// todo 由于隔空空头的1 个tzx没有记录进去，所以这里过滤掉
+			if f.AmountOut-a.SpendableBalance > 1 {
+				return fmt.Errorf("acc.update id %d %s balance %d is smaller than "+
+					"outgoing amount %d", a.RowId, a, a.SpendableBalance, f.AmountOut)
+			} else {
+				a.SpendableBalance = f.AmountOut
+			}
 		}
 		if f.IsFee {
 			a.TotalFeesPaid += f.AmountOut
