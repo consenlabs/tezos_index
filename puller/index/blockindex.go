@@ -42,11 +42,11 @@ func (idx *BlockIndex) Key() string {
 	return BlockIndexKey
 }
 
-func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b models.BlockBuilder) error {
+func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b models.BlockBuilder, tx *gorm.DB) error {
 	// update parent block to write blocks endorsed bitmap
 	if block.Parent != nil && block.Parent.Height > 0 {
 		// 更新 parent block after build
-		if err := models.UpdateBlock(block.Parent, idx.DB()); err != nil {
+		if err := models.UpdateBlock(block.Parent, tx); err != nil {
 			return fmt.Errorf("parent update: %v", err)
 		}
 	}
@@ -58,7 +58,7 @@ func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b 
 			snapHeight, block.Params.CycleFromHeight(snapHeight), snap.RollSnapshot, snap.Cycle)
 
 		snapBlock := &models.Block{}
-		err := idx.DB().Where("height = ?", snapHeight).First(snapBlock).Error
+		err := tx.Where("height = ?", snapHeight).First(snapBlock).Error
 		if err == gorm.ErrRecordNotFound {
 			return fmt.Errorf("missing snapshot index block %d for cycle %d", snapHeight, snap.Cycle)
 		}
@@ -68,22 +68,22 @@ func (idx *BlockIndex) ConnectBlock(ctx context.Context, block *models.Block, b 
 
 		snapBlock.IsCycleSnapshot = true
 
-		if err := idx.DB().Model(snapBlock).Update("is_cycle_snapshot", true).Error; err != nil {
+		if err := tx.Model(snapBlock).Update("is_cycle_snapshot", true).Error; err != nil {
 			return fmt.Errorf("snapshot index block %d: %v", snapHeight, err)
 		}
 	}
 
 	// Note: during reorg some blocks may already exist (have a valid row id)
 	// we assume insert will update such rows instead of creating new rows
-	return idx.DB().Create(block).Error
+	return tx.Create(block).Error
 }
 
-func (idx *BlockIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
+func (idx *BlockIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
 	// parent update will be done on next connect
-	return models.UpdateBlock(block, idx.db)
+	return models.UpdateBlock(block, tx)
 }
 
-func (idx *BlockIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *BlockIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting block at height %d", height)
-	return idx.DB().Where("height = ?", height).Delete(&models.Block{}).Error
+	return tx.Where("height = ?", height).Delete(&models.Block{}).Error
 }

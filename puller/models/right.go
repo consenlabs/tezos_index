@@ -14,9 +14,9 @@ var rightPool = &sync.Pool{
 }
 
 type Right struct {
-	RowId          uint64          `gorm:"primary_key;column:row_id"   json:"row_id"`                  // unique id
-	Type           chain.RightType `gorm:"column:type"      json:"type"`                               // default accounts
-	Height         int64           `gorm:"column:height"      json:"height"`                           // bc: block height (also for orphans)
+	RowId          uint64          `gorm:"primary_key;index;column:row_id"   json:"row_id"`            // unique id
+	Type           chain.RightType `gorm:"column:type;index:ht"      json:"type"`                      // default accounts
+	Height         int64           `gorm:"column:height;index:ht"      json:"height"`                  // bc: block height (also for orphans)
 	Cycle          int64           `gorm:"column:cycle;index:cycle_index"      json:"cycle"`           // bc: block cycle (tezos specific)
 	Priority       int             `gorm:"column:priority"      json:"priority"`                       // baking prio or endorsing slot
 	AccountId      AccountID       `gorm:"column:account_id;index:cycle_index"      json:"account_id"` // original rights holder

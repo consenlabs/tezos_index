@@ -10,6 +10,8 @@ import (
 	log2 "github.com/zyjblockchain/sandy_log/log"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"tezos_index/common"
 	"tezos_index/puller/index"
 	_ "tezos_index/puller/migration"
@@ -73,10 +75,12 @@ func NewEnvironment() *Environment {
 		log2.Crit("please set redis connection info")
 		panic("system fail")
 	}
+	spl := strings.Split(strings.TrimPrefix(conf.Redis, "redis://"), "/")
+	db, _ := strconv.Atoi(spl[1])
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     conf.Redis,
+		Addr:     spl[0],
 		Password: "",
-		DB:       3,
+		DB:       db,
 	})
 
 	conf.Mysql = viperConfig.GetString(domain, "mysql")
@@ -99,7 +103,7 @@ func NewEnvironment() *Environment {
 		tr := &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
 		httpClient = &http.Client{Transport: tr}
 	}
-
+	// conf.Chain = "https://mainnet-tezos.giganode.io" // todo 节点还在同步数据，暂时使用第三方node
 	client, err := rpc.NewClient(httpClient, conf.Chain)
 	if err != nil {
 		log.Errorf("connect tezos node client error: %v", err)
@@ -131,10 +135,10 @@ func (e *Environment) NewPuller() *Crawler {
 			index.NewChainIndex(e.Engine),
 			index.NewSupplyIndex(e.Engine),
 			index.NewRightsIndex(e.Engine),
-			index.NewSnapshotIndex(e.Engine),
+			index.NewSnapshotIndex(e.Engine), // 需要脏读 account
 			index.NewIncomeIndex(e.Engine),
 			index.NewGovIndex(e.Engine),
-			index.NewBigMapIndex(e.Engine),
+			index.NewBigMapIndex(e.Engine), // 需要脏读contract
 		},
 	})
 
@@ -144,7 +148,7 @@ func (e *Environment) NewPuller() *Crawler {
 		Client:        e.Client,
 		Queue:         4,
 		StopBlock:     0,
-		EnableMonitor: false,
+		EnableMonitor: true, // 等同步到最新区块之后则开启 monitor
 	}
 	return NewCrawler(cf)
 }
