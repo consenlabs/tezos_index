@@ -4,4 +4,4 @@ RUN mkdir /app
 
 COPY ./* /app/
 
-ENTRYPOINT [ "./app/tezos_index" ]
+ENTRYPOINT [ "/app/tezos_index" ]

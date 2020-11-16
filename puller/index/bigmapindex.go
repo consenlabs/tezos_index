@@ -39,7 +39,7 @@ func (idx *BigMapIndex) Key() string {
 
 // asumes op ids are already set (must run after OpIndex)
 // Note: zero is a valid bigmap id in all protocols
-func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	needClear := false
 	contract := &models.Contract{}
 	for _, op := range block.Ops {
@@ -54,7 +54,7 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 
 		// clear temp bigmaps after a batch of internal ops has been processed
 		if !op.IsInternal && needClear {
-			err := idx.DB().Where("bigmap_id < ?", int64(0)).Delete(&models.BigMapItem{}).Error
+			err := tx.Where("bigmap_id < ?", int64(0)).Delete(&models.BigMapItem{}).Error
 			if err != nil {
 				return fmt.Errorf("clearing temp bigmaps for op [%d:%d] failed: %v", op.OpN, op.OpC, err)
 			}
@@ -98,7 +98,7 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 
 		// load corresponding contract
 		if contract.AccountId != op.ReceiverId {
-			err := idx.DB().Where("account_id = ?", op.ReceiverId.Value()).First(contract).Error // Stream
+			err := tx.Where("account_id = ?", op.ReceiverId.Value()).First(contract).Error // Stream
 			if err != nil {
 				return fmt.Errorf("missing contract account %d: %v", op.ReceiverId, err)
 			}
@@ -114,21 +114,21 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 			case micheline.BigMapDiffActionUpdate, micheline.BigMapDiffActionRemove:
 				// find bigmap allocation (required for real key type)
 				if alloc.RowId == 0 || alloc.BigMapId != v.Id {
-					err := idx.DB().Where("bigmap_id = ? and action = ? ", v.Id, uint64(micheline.BigMapDiffActionAlloc)).First(alloc).Error
-					if err != nil {
+					err := tx.Where("bigmap_id = ? and action = ? ", v.Id, uint64(micheline.BigMapDiffActionAlloc)).First(alloc).Error
+					if err != nil && err != gorm.ErrRecordNotFound {
 						return fmt.Errorf("etl.bigmap.alloc decode: %v", err)
 					}
 				}
 				if last.RowId == 0 || last.BigMapId != alloc.BigMapId {
-					err := idx.DB().Where("bigmap_id = ?", v.Id).Last(last).Error
-					if err != nil {
+					err := tx.Where("bigmap_id = ?", v.Id).Last(last).Error
+					if err != nil && err != gorm.ErrRecordNotFound {
 						return fmt.Errorf("etl.bigmap.last decode: %v", err)
 					}
 				}
 
 				// find the previuos entry at this key if exists
-				err := idx.DB().Where("bigmap_id = ? and key_hash = ? and is_replaced = ?", v.Id, v.KeyHash.Hash.Hash, false).First(prev).Error
-				if err != nil {
+				err := tx.Where("bigmap_id = ? and key_hash = ? and is_replaced = ?", v.Id, v.KeyHash.Hash.Hash, false).First(prev).Error
+				if err != nil && err != gorm.ErrRecordNotFound {
 					return fmt.Errorf("etl.bigmap.update decode: %v", err)
 				}
 
@@ -137,7 +137,7 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 					prev.IsReplaced = true
 					prev.Updated = block.Height
 
-					if err := idx.DB().Model(&models.BigMapItem{}).Updates(prev).Error; err != nil {
+					if err := tx.Model(&models.BigMapItem{}).Updates(prev).Error; err != nil {
 						return fmt.Errorf("etl.bigmap.update: %v", err)
 					}
 				}
@@ -158,7 +158,7 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 
 				// insert immediately to allow sequence of updates
 				item := models.NewBigMapItem(op, contract, v, prev.RowId, alloc.KeyType, last.Counter+1, nkeys)
-				if err := idx.DB().Create(item).Error; err != nil {
+				if err := tx.Create(item).Error; err != nil {
 					return fmt.Errorf("etl.bigmap.insert: %v", err)
 				}
 
@@ -168,7 +168,7 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 				// insert immediately to allow sequence of updates
 				needClear = needClear || v.DestId < 0
 				item := models.NewBigMapItem(op, contract, v, prev.RowId, 0, 0, 0)
-				if err := idx.DB().Create(item).Error; err != nil {
+				if err := tx.Create(item).Error; err != nil {
 					return fmt.Errorf("etl.bigmap.insert: %v", err)
 				}
 				last = item
@@ -182,8 +182,8 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 				var counter int64
 
 				var sources []*models.BigMapItem
-				err := idx.DB().Where("bigmap_id = ? and is_replaced = ? and is_deleted = ?", v.SourceId, false, false).Find(&sources).Error
-				if err != nil {
+				err := tx.Where("bigmap_id = ? and is_replaced = ? and is_deleted = ?", v.SourceId, false, false).Find(&sources).Error
+				if err != nil && err != gorm.ErrRecordNotFound {
 					return fmt.Errorf("etl.bigmap.copy: %v", err)
 				}
 				for _, source := range sources {
@@ -201,33 +201,30 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 				}
 
 				// todo batch insert
-				tx := idx.DB().Begin()
 				for _, val := range ins {
 					if err := tx.Create(val).Error; err != nil {
-						tx.Rollback()
 						return fmt.Errorf("etl.bigmap.insert: %v", err)
 					}
 				}
-				tx.Commit()
 			}
 		}
 	}
 
 	// clear temp bigmaps after all ops have been processed
 	if needClear {
-		err := idx.DB().Where("bigmap_id < ?", int64(0)).Delete(&models.BigMapItem{}).Error
-		if err != nil {
+		err := tx.Where("bigmap_id < ?", int64(0)).Delete(&models.BigMapItem{}).Error
+		if err != nil && err != gorm.ErrRecordNotFound {
 			return fmt.Errorf("clearing temp bigmaps for block %d failed: %v", block.Height, err)
 		}
 	}
 	return nil
 }
 
-func (idx *BigMapIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DeleteBlock(ctx, block.Height)
+func (idx *BigMapIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting bigmap updates at height %d", height)
 
 	// need to unset IsReplaced flags in prior rows for every entry we find here
@@ -237,8 +234,8 @@ func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64) error {
 
 	// find all items to delete and all items to update
 	var items []*models.BigMapItem
-	err := idx.DB().Select("row_id, prev_id, is_copied").Where("height = ? ", height).Find(&items).Error
-	if err != nil {
+	err := tx.Select("row_id, prev_id, is_copied").Where("height = ? ", height).Find(&items).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
 		return err
 	}
 	for _, item := range items {
@@ -256,8 +253,8 @@ func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64) error {
 	}
 	if len(ids) > 0 {
 		var items []*models.BigMapItem
-		err := idx.DB().Where("row_id in (?)", ids).Find(&items).Error
-		if err != nil {
+		err := tx.Where("row_id in (?)", ids).Find(&items).Error
+		if err != nil && err != gorm.ErrRecordNotFound {
 			return err
 		}
 		for _, item := range items {
@@ -268,20 +265,17 @@ func (idx *BigMapIndex) DeleteBlock(ctx context.Context, height int64) error {
 	// and run update
 	if len(upd) > 0 {
 		// todo batch update
-		tx := idx.DB().Begin()
 		for _, val := range upd {
 			err := models.UpdatesBigMapItem(val, tx)
 			if err != nil {
-				tx.Rollback()
 				return err
 			}
 		}
-		tx.Commit()
 	}
 
 	// now delete the original items
 	if len(del) > 0 {
-		return idx.DB().Where("row_id in (?)", del).Delete(&models.BigMapItem{}).Error
+		return tx.Where("row_id in (?)", del).Delete(&models.BigMapItem{}).Error
 	}
 	return nil
 }

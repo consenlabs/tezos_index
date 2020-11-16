@@ -28,15 +28,15 @@ func (idx *SupplyIndex) Key() string {
 	return SupplyIndexKey
 }
 
-func (idx *SupplyIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DB().Model(&models.Supply{}).Create(block.Supply).Error
+func (idx *SupplyIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return tx.Model(&models.Supply{}).Create(block.Supply).Error
 }
 
-func (idx *SupplyIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DeleteBlock(ctx, block.Height)
+func (idx *SupplyIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *SupplyIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *SupplyIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting supply state at height %d", height)
-	return idx.DB().Where("height = ?", height).Delete(&models.Supply{}).Error
+	return tx.Where("height = ?", height).Delete(&models.Supply{}).Error
 }

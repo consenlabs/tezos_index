@@ -93,8 +93,6 @@ steps:
   settings:
     deployment:
     - tezos-polling-dev:tezos-polling
-    - tezos-api-dev:tezos-api
-    - tezos-notifier-dev:tezos-notifier
     kubernetes_server:
       from_secret: gcp-server-dev
     kubernetes_token:
@@ -115,8 +113,6 @@ steps:
   settings:
     deployment:
     - tezos-polling-staging:tezos-polling
-    - tezos-api-staging:tezos-api
-    - tezos-notifier-staging:tezos-notifier
     kubernetes_server:
       from_secret: gcp-server-staging
     kubernetes_token:

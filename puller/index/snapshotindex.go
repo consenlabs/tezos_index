@@ -40,10 +40,10 @@ func (idx *SnapshotIndex) Key() string {
 	return SnapshotIndexKey
 }
 
-func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// handle snapshot index
 	if block.TZ.Snapshot != nil {
-		if err := idx.UpdateCycleSnapshot(ctx, block); err != nil {
+		if err := idx.UpdateCycleSnapshot(ctx, block, tx); err != nil {
 			return err
 		}
 	}
@@ -61,7 +61,7 @@ func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block,
 	ins := make([]*models.Snapshot, 0, int(block.Chain.FundedAccounts)) // hint
 
 	var accs []*models.Account
-	err := idx.DB().Model(&models.Account{}).Select("row_id, delegate_id, is_delegate, "+
+	err := tx.Model(&models.Account{}).Select("row_id, delegate_id, is_delegate, "+
 		"is_active_delegate, spendable_balance, frozen_deposits, frozen_fees, "+
 		"delegated_balance, active_delegations, delegate_since").Where("is_active_delegate = ?", true).Find(&accs).Error
 	if err != nil {
@@ -94,14 +94,11 @@ func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block,
 	}
 
 	// todo batch insert
-	tx := idx.DB().Begin()
 	for _, in := range ins {
 		if err := tx.Create(in).Error; err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 
 	for _, v := range ins {
 		v.Free()
@@ -111,7 +108,7 @@ func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block,
 	// snapshot all delegating accounts with non-zero balance that reference one of the
 	// roll owners
 	accs = make([]*models.Account, 0)
-	err = idx.DB().Model(&models.Account{}).Select("row_id, delegate_id, spendable_balance, "+
+	err = tx.Model(&models.Account{}).Select("row_id, delegate_id, spendable_balance, "+
 		"delegated_since, unclaimed_balance, is_vesting").Where("is_funded = ? and delegate_id in (?)", true, rollOwners).Find(&accs).Error
 	if err != nil {
 		return err
@@ -142,43 +139,40 @@ func (idx *SnapshotIndex) ConnectBlock(ctx context.Context, block *models.Block,
 	}
 
 	// todo batch insert
-	tx = idx.DB().Begin()
 	log.Infof("start insert snapshot index; record num: %d", len(ins))
 	for _, in := range ins {
 		if err := tx.Create(in).Error; err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 	for _, v := range ins {
 		v.Free()
 	}
 	return err
 }
 
-func (idx *SnapshotIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
+func (idx *SnapshotIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
 	// skip non-snapshot blocks
 	if block.Height == 0 || block.Height%block.Params.BlocksPerRollSnapshot != 0 {
 		return nil
 	}
-	return idx.DeleteBlock(ctx, block.Height)
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *SnapshotIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *SnapshotIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting snapshots at height %d", height)
-	err := idx.DB().Where("height = ?", height).Delete(&models.Snapshot{}).Error
+	err := tx.Where("height = ?", height).Delete(&models.Snapshot{}).Error
 	return err
 }
 
-func (idx *SnapshotIndex) UpdateCycleSnapshot(ctx context.Context, block *models.Block) error {
+func (idx *SnapshotIndex) UpdateCycleSnapshot(ctx context.Context, block *models.Block, tx *gorm.DB) error {
 	// update all snapshot rows at snapshot cycle & index
 	snap := block.TZ.Snapshot
 	// fetch all rows from table, updating contents
 	rows := make([]*models.Snapshot, 0, 1024)
 
 	var ss []*models.Snapshot
-	err := idx.DB().Where("cycle = ? and s_index = ?", snap.Cycle-(block.Params.PreservedCycles+2), snap.RollSnapshot).Find(&ss).Error
+	err := tx.Where("cycle = ? and s_index = ?", snap.Cycle-(block.Params.PreservedCycles+2), snap.RollSnapshot).Find(&ss).Error
 	if err != nil {
 		return err
 	}
@@ -189,14 +183,11 @@ func (idx *SnapshotIndex) UpdateCycleSnapshot(ctx context.Context, block *models
 
 	// store update
 	// todo batch update
-	tx := idx.DB().Begin()
 	for _, row := range rows {
 		if err := updateThisSnapshot(row, tx); err != nil {
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 
 	// FIXME: consider flushing the table for sorted results after update
 	// if this becomes a problem

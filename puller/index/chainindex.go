@@ -28,16 +28,16 @@ func (idx *ChainIndex) Key() string {
 	return ChainIndexKey
 }
 
-func (idx *ChainIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DB().Create(block.Chain).Error
+func (idx *ChainIndex) ConnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return tx.Create(block.Chain).Error
 }
 
-func (idx *ChainIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DeleteBlock(ctx, block.Height)
+func (idx *ChainIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *ChainIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *ChainIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting chain state at height %d", height)
-	err := idx.DB().Where("height = ?", height).Delete(&models.Chain{}).Error
+	err := tx.Where("height = ?", height).Delete(&models.Chain{}).Error
 	return err
 }

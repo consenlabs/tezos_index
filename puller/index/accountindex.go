@@ -34,7 +34,7 @@ func (idx *AccountIndex) Key() string {
 	return AccountIndexKey
 }
 
-func (idx *AccountIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *AccountIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	upd := make([]*models.Account, 0, len(builder.Accounts()))
 	// regular accounts
 	for _, acc := range builder.Accounts() {
@@ -50,15 +50,12 @@ func (idx *AccountIndex) ConnectBlock(ctx context.Context, block *models.Block, 
 	}
 
 	// todo batch update
-	tx := idx.db.Begin()
 	for _, upAcc := range upd {
 		if err := UpdateAccount(upAcc, tx); err != nil {
 			log.Errorf("update account record error: %v; upAccount: %v", err, upAcc)
-			tx.Rollback()
 			return err
 		}
 	}
-	tx.Commit()
 	return nil
 }
 
@@ -126,7 +123,7 @@ func UpdateAccount(acc *models.Account, db *gorm.DB) error {
 	return db.Model(&models.Account{}).Where("row_id = ?", acc.RowId.Value()).Updates(data).Error
 }
 
-func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	// accounts to delete
 	del := make([]uint64, 0)
 	// accounts to update
@@ -155,7 +152,7 @@ func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Bloc
 		// remove duplicates and sort; returns new slice
 		del = util.UniqueUint64Slice(del)
 		log.Debugf("Rollback removing accounts %#v", del)
-		if err := idx.DB().Where("row_id in (?)", del).Delete(&models.Account{}).Error; err != nil {
+		if err := tx.Where("row_id in (?)", del).Delete(&models.Account{}).Error; err != nil {
 			log.Errorf("batch delete account error: %v", err)
 			return err
 		}
@@ -167,7 +164,7 @@ func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Bloc
 
 	// todo batch update
 	for _, upAcc := range upd {
-		if err := UpdateAccount(upAcc, idx.db); err != nil {
+		if err := UpdateAccount(upAcc, tx); err != nil {
 			log.Errorf("update account record error: %v; upAccount: %v", err, upAcc)
 			return err
 		}
@@ -176,8 +173,8 @@ func (idx *AccountIndex) DisconnectBlock(ctx context.Context, block *models.Bloc
 }
 
 // DeleteBlock
-func (idx *AccountIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *AccountIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting accounts at height %d", height)
-	err := idx.DB().Where("first_seen = ?", height).Delete(&models.Account{}).Error
+	err := tx.Where("first_seen = ?", height).Delete(&models.Account{}).Error
 	return err
 }

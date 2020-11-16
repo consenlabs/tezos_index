@@ -35,7 +35,7 @@ func (idx *ContractIndex) Key() string {
 	return ContractIndexKey
 }
 
-func (idx *ContractIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder) error {
+func (idx *ContractIndex) ConnectBlock(ctx context.Context, block *models.Block, builder models.BlockBuilder, tx *gorm.DB) error {
 	ct := make([]*models.Contract, 0, block.NewContracts)
 	for _, op := range block.Ops {
 		if op.Type != chain.OpTypeOrigination {
@@ -80,51 +80,48 @@ func (idx *ContractIndex) ConnectBlock(ctx context.Context, block *models.Block,
 	}
 	// insert, will generate unique row ids
 	if len(ct) > 0 {
-		tx := idx.db.Begin()
 		for _, contract := range ct {
 			if err := tx.Create(contract).Error; err != nil {
-				tx.Rollback()
 				return err
 			}
 		}
-		tx.Commit()
 		return nil
 	} else {
 		return nil
 	}
 }
 
-func BatchInsertContracts(records []*models.Contract, db *gorm.DB) error {
-	if len(records) == 0 {
-		return nil
-	}
-	sql := "INSERT INTO `contracts` (`hash`, `account_id`, `manager_id`, `height`, `fee`, `gas_limit`, `gas_used`, `gas_price`, `storage_limit`," +
-		" `storage_size`, `storage_paid`, `script`, `is_spendable`, `is_delegatable`) VALUES "
-	// 循环data数组,组合sql语句
-	for key, value := range records {
-		if len(records)-1 == key {
-			// 最后一条数据 以分号结尾
-			sql += fmt.Sprintf("('%s','%d','%d','%d','%d','%d','%d','%f','%d','%d','%d','%s','%t','%t');",
-				value.Hash, value.AccountId, value.ManagerId, value.Height, value.Fee, value.GasLimit, value.GasUsed,
-				value.GasPrice, value.StorageLimit, value.StorageSize, value.StoragePaid, value.Script, value.IsSpendable,
-				value.IsDelegatable)
-		} else {
-			sql += fmt.Sprintf("('%s','%d','%d','%d','%d','%d','%d','%f','%d','%d','%d','%s','%t','%t'),",
-				value.Hash, value.AccountId, value.ManagerId, value.Height, value.Fee, value.GasLimit, value.GasUsed,
-				value.GasPrice, value.StorageLimit, value.StorageSize, value.StoragePaid, value.Script, value.IsSpendable,
-				value.IsDelegatable)
-		}
-	}
-	err := db.Exec(sql).Error
-	return err
+// func BatchInsertContracts(records []*models.Contract, db *gorm.DB) error {
+// 	if len(records) == 0 {
+// 		return nil
+// 	}
+// 	sql := "INSERT INTO `contracts` (`hash`, `account_id`, `manager_id`, `height`, `fee`, `gas_limit`, `gas_used`, `gas_price`, `storage_limit`," +
+// 		" `storage_size`, `storage_paid`, `script`, `is_spendable`, `is_delegatable`) VALUES "
+// 	// 循环data数组,组合sql语句
+// 	for key, value := range records {
+// 		if len(records)-1 == key {
+// 			// 最后一条数据 以分号结尾
+// 			sql += fmt.Sprintf("('%s','%d','%d','%d','%d','%d','%d','%f','%d','%d','%d','%s','%t','%t');",
+// 				value.Hash, value.AccountId, value.ManagerId, value.Height, value.Fee, value.GasLimit, value.GasUsed,
+// 				value.GasPrice, value.StorageLimit, value.StorageSize, value.StoragePaid, value.Script, value.IsSpendable,
+// 				value.IsDelegatable)
+// 		} else {
+// 			sql += fmt.Sprintf("('%s','%d','%d','%d','%d','%d','%d','%f','%d','%d','%d','%s','%t','%t'),",
+// 				value.Hash, value.AccountId, value.ManagerId, value.Height, value.Fee, value.GasLimit, value.GasUsed,
+// 				value.GasPrice, value.StorageLimit, value.StorageSize, value.StoragePaid, value.Script, value.IsSpendable,
+// 				value.IsDelegatable)
+// 		}
+// 	}
+// 	err := db.Exec(sql).Error
+// 	return err
+// }
+
+func (idx *ContractIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder, tx *gorm.DB) error {
+	return idx.DeleteBlock(ctx, block.Height, tx)
 }
 
-func (idx *ContractIndex) DisconnectBlock(ctx context.Context, block *models.Block, _ models.BlockBuilder) error {
-	return idx.DeleteBlock(ctx, block.Height)
-}
-
-func (idx *ContractIndex) DeleteBlock(ctx context.Context, height int64) error {
+func (idx *ContractIndex) DeleteBlock(ctx context.Context, height int64, tx *gorm.DB) error {
 	log.Debugf("Rollback deleting contracts at height %d", height)
-	err := idx.DB().Where("height = ?", height).Delete(&models.Contract{}).Error
+	err := tx.Where("height = ?", height).Delete(&models.Contract{}).Error
 	return err
 }

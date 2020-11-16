@@ -40,7 +40,7 @@ type Account struct {
 	PubkeyHash         []byte            `gorm:"column:pubkey_hash"       json:"pubkey_hash"`
 	PubkeyType         chain.HashType    `gorm:"column:pubkey_type"    json:"pubkey_type"`
 	Type               chain.AddressType `gorm:"column:address_type;index:addr"   json:"address_type"`
-	Addr               string            `gorm:"column:address" json:"-"`
+	Addr               string            `gorm:"column:address;index:raw_address" json:"-"`
 	FirstIn            int64             `gorm:"column:first_in"   json:"first_in"`
 	FirstOut           int64             `gorm:"column:first_out"   json:"first_out"`
 	LastIn             int64             `gorm:"column:last_in" json:"last_in"`
@@ -287,8 +287,13 @@ func (a *Account) UpdateBalance(f *Flow) error {
 		a.FrozenFees += f.AmountIn - f.AmountOut
 	case FlowCategoryBalance:
 		if a.SpendableBalance < f.AmountOut {
-			return fmt.Errorf("acc.update id %d %s balance %d is smaller than "+
-				"outgoing amount %d", a.RowId, a, a.SpendableBalance, f.AmountOut)
+			// todo 由于隔空空头的1 个tzx没有记录进去，所以这里过滤掉
+			if f.AmountOut-a.SpendableBalance > 1 {
+				return fmt.Errorf("acc.update id %d %s balance %d is smaller than "+
+					"outgoing amount %d", a.RowId, a, a.SpendableBalance, f.AmountOut)
+			} else {
+				a.SpendableBalance = f.AmountOut
+			}
 		}
 		if f.IsFee {
 			a.TotalFeesPaid += f.AmountOut

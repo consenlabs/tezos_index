@@ -31,8 +31,8 @@ type BigMapItem struct {
 	KeyHash     []byte                     `gorm:"column:key_hash"             json:"key_hash"`  // not compressedn because random
 	KeyEncoding micheline.PrimType         `gorm:"column:key_encoding"      json:"key_encoding"` // type of the key encoding
 	KeyType     micheline.OpCode           `gorm:"column:key_type"      json:"key_type"`         // type of the key encoding
-	Key         []byte                     `gorm:"column:key"      json:"key"`                   // key bytes: int: big.Int, string or []byte
-	Value       []byte                     `gorm:"column:value"      json:"value"`               // value bytes: binary encoded micheline.Prim
+	Key         []byte                     `gorm:"column:key;type:BLOB"      json:"key"`         // key bytes: int: big.Int, string or []byte
+	Value       []byte                     `gorm:"column:value;type:BLOB"      json:"value"`     // value bytes: binary encoded micheline.Prim
 	IsReplaced  bool                       `gorm:"column:is_replaced"     json:"is_replaced"`    // flag to indicate this entry has been replaced by a newer entry
 	IsDeleted   bool                       `gorm:"column:is_deleted"      json:"is_deleted"`     // flag to indicate this key has been deleted
 	IsCopied    bool                       `gorm:"column:is_copied"      json:"is_copied"`       // flag to indicate this key has been copied

@@ -7,7 +7,6 @@ import (
 )
 
 func InitDB(dsn string) *gorm.DB {
-	log.Infof("数据库dsn: %s", dsn)
 	db, err := gorm.Open("mysql", dsn)
 	if err != nil {
 		panic(err)

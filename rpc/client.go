@@ -38,6 +38,7 @@ type Client struct {
 
 // NewClient returns a new Tezos RPC client.
 func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
+	log.Debugf("chain node url: %s", baseURL)
 	if httpClient == nil {
 		httpClient = http.DefaultClient
 	}
