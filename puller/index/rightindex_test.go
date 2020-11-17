@@ -58,3 +58,28 @@ func TestAccountIndex_ConnectBlock(t *testing.T) {
 	assert.NoError(t, err)
 	// tx01.Commit()
 }
+
+func TestBatchInsertRights(t *testing.T) {
+	dsn := "root:WcGsHDMBmcv7mc#QWkuR@tcp(127.0.0.1:3306)/tezos_index?charset=utf8mb4&parseTime=True&loc=Local"
+	tx := InitDB(dsn)
+
+	contract := &models.Contract{
+		RowId: 9,
+		Hash:  nil,
+	}
+
+	sql := `
+			SELECT
+				*
+			FROM
+				contracts
+			WHERE
+				account_id = ?
+			LIMIT 1
+			`
+	err := tx.Raw(sql, 10).Scan(contract).Error
+	if err != nil {
+		t.Log(err)
+	}
+	t.Log(contract.RowId, contract.Height)
+}
