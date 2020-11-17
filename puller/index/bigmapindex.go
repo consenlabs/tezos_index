@@ -98,7 +98,16 @@ func (idx *BigMapIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 
 		// load corresponding contract
 		if contract.AccountId != op.ReceiverId {
-			err := tx.Where("account_id = ?", op.ReceiverId.Value()).First(contract).Error // Stream
+			sql := `
+			SELECT
+				*
+			FROM
+				contracts
+			WHERE
+				account_id = ?
+			LIMIT 1
+			`
+			err := tx.Raw(sql, op.ReceiverId.Value()).Scan(contract).Error
 			if err != nil {
 				return fmt.Errorf("missing contract account %d: %v", op.ReceiverId, err)
 			}
