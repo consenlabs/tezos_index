@@ -941,9 +941,9 @@ func (c *Crawler) syncBlockchain() {
 			}
 
 			// rebuild ranking data
-			if err := c.indexer.UpdateRanking(ctx, block.Timestamp); err != nil {
-				log.Errorf("updating ranking: %v", err)
-			}
+			// if err := c.indexer.UpdateRanking(ctx, block.Timestamp); err != nil {
+			// 	log.Errorf("updating ranking: %v", err)
+			// }
 		}
 
 		// log progress once every 10sec
