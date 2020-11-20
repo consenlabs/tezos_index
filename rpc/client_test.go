@@ -28,6 +28,11 @@ func TestClient_GetConstants(t *testing.T) {
 	// 	}
 	// 	t.Log(head.Level)
 	// }
+	header, err := client.GetTipHeader(context.Background())
+	assert.NoError(t, err)
+	t.Log(header.Level)
+	t.Log(header.Hash)
+	t.Log(header)
 }
 
 func TestClient_GetBlockHeight(t *testing.T) {
