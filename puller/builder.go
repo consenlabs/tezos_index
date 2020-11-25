@@ -1729,7 +1729,8 @@ func (b *Builder) PatchBigMapDiff(ctx context.Context, diff micheline.BigMapDiff
 	}
 	id, ok := staticAthensBigmapIds[contract.String()]
 	if !ok {
-		return nil, fmt.Errorf("bigmap patch unknown contract %s", contract.String())
+		// return nil, fmt.Errorf("bigmap patch unknown contract %s", contract.String()) todo sandy modify
+		return diff, nil
 	}
 
 	// check if bigmap is allocated
