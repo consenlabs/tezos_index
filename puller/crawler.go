@@ -782,46 +782,49 @@ func (c *Crawler) syncBlockchain() {
 		// block chain fork
 		// detect and process reorg (skip for genesis block)
 		if tip.BestHeight > 0 && tip.BestHash.String() != tzblock.Parent().String() {
-			log.Infof("Reorg at height %d: parent %s is not on our main chain, have %s",
+			log.Errorf("Fork block: Reorg at height %d: parent %s is not on our main chain, have %s",
 				tzblock.Block.Header.Level, tzblock.Block.Header.Predecessor, tip.BestHash)
 
-			// those are the two blocks between the reorg will switch
-			tipblock := c.builder.parent
-			bestblock, err := models.NewBlock(tzblock, nil)
-			if err != nil {
-				log.Errorf("Reorg failed: %v", err)
-				errCount++
-				goto again
-			}
-
-			// run reorg
-			if err = c.reorganize(ctx, tipblock, bestblock, false, false); err != nil {
-				log.Errorf("Reorg failed: %v", err)
-				c.builder.Purge()
-				if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
-					log.Errorf("Reinit failed: %v", err)
-					errCount += 10
-				} else {
-					errCount++
-				}
-				goto again
-			}
-
-			// update local tip copy after reorg was successful
-			newtip := c.Tip()
-			// safety check for non zero parent id
-			if newtip.BestId == 0 {
-				log.Errorf("Zero parent id after reorg for parent block %d %s", newtip.BestHeight, newtip.BestHash)
-				c.builder.Purge()
-				if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
-					log.Errorf("Reinit failed: %v", err)
-					errCount += 10
-				} else {
-					errCount++
-				}
-				goto again
-			}
-			tip = newtip
+			// todo 安全起见，因为没法测试链分叉的情况。这里暂时屏蔽链分叉的逻辑
+			errCount++
+			goto again
+			// // those are the two blocks between the reorg will switch
+			// tipblock := c.builder.parent
+			// bestblock, err := models.NewBlock(tzblock, nil)
+			// if err != nil {
+			// 	log.Errorf("Reorg failed: %v", err)
+			// 	errCount++
+			// 	goto again
+			// }
+			//
+			// // run reorg
+			// if err = c.reorganize(ctx, tipblock, bestblock, false, false); err != nil {
+			// 	log.Errorf("Reorg failed: %v", err)
+			// 	c.builder.Purge()
+			// 	if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
+			// 		log.Errorf("Reinit failed: %v", err)
+			// 		errCount += 10
+			// 	} else {
+			// 		errCount++
+			// 	}
+			// 	goto again
+			// }
+			//
+			// // update local tip copy after reorg was successful
+			// newtip := c.Tip()
+			// // safety check for non zero parent id
+			// if newtip.BestId == 0 {
+			// 	log.Errorf("Zero parent id after reorg for parent block %d %s", newtip.BestHeight, newtip.BestHash)
+			// 	c.builder.Purge()
+			// 	if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
+			// 		log.Errorf("Reinit failed: %v", err)
+			// 		errCount += 10
+			// 	} else {
+			// 		errCount++
+			// 	}
+			// 	goto again
+			// }
+			// tip = newtip
 		}
 
 		// shutdown check
@@ -941,9 +944,9 @@ func (c *Crawler) syncBlockchain() {
 			}
 
 			// rebuild ranking data
-			if err := c.indexer.UpdateRanking(ctx, block.Timestamp); err != nil {
-				log.Errorf("updating ranking: %v", err)
-			}
+			// if err := c.indexer.UpdateRanking(ctx, block.Timestamp); err != nil {
+			// 	log.Errorf("updating ranking: %v", err)
+			// }
 		}
 
 		// log progress once every 10sec

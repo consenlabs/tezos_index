@@ -168,6 +168,27 @@ func (c *Client) GetTipHeader(ctx context.Context) (*BlockHeader, error) {
 	if err := c.Get(ctx, u, &head); err != nil {
 		return nil, err
 	}
+	// todo 推迟5个区块高度来更新
+	stableHeight := head.Level - 5
+	if stableHeight < 0 {
+		stableHeight = 0
+	}
+
+	stableHead, err := c.GetBlockHeader(ctx, stableHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	return stableHead, nil
+}
+
+func (c *Client) GetBlockHeader(ctx context.Context, height int64) (*BlockHeader, error) {
+	var head BlockHeader
+	u := fmt.Sprintf("chains/%s/blocks/%d/header", c.ChainID, height)
+	log.Debugf("rpc: getBlockHeader: %s", u)
+	if err := c.Get(ctx, u, &head); err != nil {
+		return nil, err
+	}
 	return &head, nil
 }
 
