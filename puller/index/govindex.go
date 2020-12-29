@@ -198,7 +198,8 @@ func (idx *GovIndex) openVote(ctx context.Context, block *models.Block, builder 
 		return err
 	}
 	if !election.IsOpen {
-		return fmt.Errorf("opening vote: election %d already closed", election.RowId)
+		// return fmt.Errorf("opening vote: election %d already closed", election.RowId)
+		election.IsOpen = true
 	}
 
 	// update election
