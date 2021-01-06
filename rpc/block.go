@@ -169,7 +169,7 @@ func (c *Client) GetTipHeader(ctx context.Context) (*BlockHeader, error) {
 		return nil, err
 	}
 	// todo 推迟3个区块高度来更新
-	stableHeight := head.Level - 3
+	stableHeight := head.Level - 1
 	if stableHeight < 0 {
 		stableHeight = 0
 	}
