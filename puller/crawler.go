@@ -785,7 +785,8 @@ func (c *Crawler) syncBlockchain() {
 			log.Errorf("Fork block: Reorg at height %d: parent %s is not on our main chain, have %s",
 				tzblock.Block.Header.Level, tzblock.Block.Header.Predecessor, tip.BestHash)
 
-			// todo 安全起见，因为没法测试链分叉的情况。这里暂时屏蔽链分叉的逻辑
+			// todo 安全起见，因为没法测试链分叉的情况。这里暂时屏蔽链分叉的逻辑，在一次staging 环境分叉之后又放开了对分叉的处理
+			// todo 这里放开了分叉的处理，处理方法是，在数据库中把分叉的block 记录删除掉，在redis 中的tip 对应的value 中的 height 和 last_block 回滚到之前的区块
 			// errCount++
 			// goto again
 
