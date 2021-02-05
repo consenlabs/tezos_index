@@ -365,8 +365,10 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 		}
 		ic, ok := incomeMap[acc.RowId]
 		if !ok {
-			return fmt.Errorf("income: missing snapshot data for baker %s [%d] at snapshot %d[%d]",
+			err := fmt.Errorf("income: missing snapshot data for baker %s [%d] at snapshot %d[%d]",
 				v.Delegate, acc.RowId, sn.Cycle, sn.RollSnapshot)
+			log.Errorf("income error: %v", err) // todo
+			return nil
 		}
 		ic.NBakingRights++
 		ic.ExpectedIncome += blockReward
@@ -390,8 +392,10 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 		}
 		ic, ok := incomeMap[acc.RowId]
 		if !ok {
-			return fmt.Errorf("income: missing income data for endorser %s %d at %d[%d]",
+			err := fmt.Errorf("income: missing income data for endorser %s %d at %d[%d]",
 				v.Delegate, acc.RowId, sn.Cycle, sn.RollSnapshot)
+			log.Errorf("income error: %v", err) // todo
+			return nil
 		}
 		ic.NEndorsingRights += int64(len(v.Slots))
 		ic.ExpectedIncome += endorseReward * int64(len(v.Slots))
@@ -411,8 +415,9 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 			// load prev data
 			ic, err = idx.loadIncome(ctx, right.Cycle, right.AccountId, tx)
 			if err != nil {
-				return fmt.Errorf("income: missing income data for prev cycle endorser %d at %d[%d]",
-					right.AccountId, sn.Cycle, sn.RollSnapshot)
+				// return fmt.Errorf("income: missing income data for prev cycle endorser %d at %d[%d]",
+				// 	right.AccountId, sn.Cycle, sn.RollSnapshot) todo
+				return nil
 			}
 			// copy to new income struct
 			ic = &models.Income{

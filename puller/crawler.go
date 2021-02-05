@@ -785,46 +785,48 @@ func (c *Crawler) syncBlockchain() {
 			log.Errorf("Fork block: Reorg at height %d: parent %s is not on our main chain, have %s",
 				tzblock.Block.Header.Level, tzblock.Block.Header.Predecessor, tip.BestHash)
 
-			// todo 安全起见，因为没法测试链分叉的情况。这里暂时屏蔽链分叉的逻辑
-			errCount++
-			goto again
-			// // those are the two blocks between the reorg will switch
-			// tipblock := c.builder.parent
-			// bestblock, err := models.NewBlock(tzblock, nil)
-			// if err != nil {
-			// 	log.Errorf("Reorg failed: %v", err)
-			// 	errCount++
-			// 	goto again
-			// }
-			//
-			// // run reorg
-			// if err = c.reorganize(ctx, tipblock, bestblock, false, false); err != nil {
-			// 	log.Errorf("Reorg failed: %v", err)
-			// 	c.builder.Purge()
-			// 	if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
-			// 		log.Errorf("Reinit failed: %v", err)
-			// 		errCount += 10
-			// 	} else {
-			// 		errCount++
-			// 	}
-			// 	goto again
-			// }
-			//
-			// // update local tip copy after reorg was successful
-			// newtip := c.Tip()
-			// // safety check for non zero parent id
-			// if newtip.BestId == 0 {
-			// 	log.Errorf("Zero parent id after reorg for parent block %d %s", newtip.BestHeight, newtip.BestHash)
-			// 	c.builder.Purge()
-			// 	if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
-			// 		log.Errorf("Reinit failed: %v", err)
-			// 		errCount += 10
-			// 	} else {
-			// 		errCount++
-			// 	}
-			// 	goto again
-			// }
-			// tip = newtip
+			// todo 安全起见，因为没法测试链分叉的情况。这里暂时屏蔽链分叉的逻辑，在一次staging 环境分叉之后又放开了对分叉的处理
+			// todo 这里放开了分叉的处理，处理方法是，在数据库中把分叉的block 记录删除掉，在redis 中的tip 对应的value 中的 height 和 last_block 回滚到之前的区块
+			// errCount++
+			// goto again
+
+			// those are the two blocks between the reorg will switch
+			tipblock := c.builder.parent
+			bestblock, err := models.NewBlock(tzblock, nil)
+			if err != nil {
+				log.Errorf("Reorg failed: %v", err)
+				errCount++
+				goto again
+			}
+
+			// run reorg
+			if err = c.reorganize(ctx, tipblock, bestblock, false, false); err != nil {
+				log.Errorf("Reorg failed: %v", err)
+				c.builder.Purge()
+				if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
+					log.Errorf("Reinit failed: %v", err)
+					errCount += 10
+				} else {
+					errCount++
+				}
+				goto again
+			}
+
+			// update local tip copy after reorg was successful
+			newtip := c.Tip()
+			// safety check for non zero parent id
+			if newtip.BestId == 0 {
+				log.Errorf("Zero parent id after reorg for parent block %d %s", newtip.BestHeight, newtip.BestHash)
+				c.builder.Purge()
+				if err := c.builder.Init(ctx, tip, c.rpc); err != nil {
+					log.Errorf("Reinit failed: %v", err)
+					errCount += 10
+				} else {
+					errCount++
+				}
+				goto again
+			}
+			tip = newtip
 		}
 
 		// shutdown check
