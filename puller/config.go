@@ -148,7 +148,7 @@ func (e *Environment) NewPuller() *Crawler {
 		Client:        e.Client,
 		Queue:         4,
 		StopBlock:     0,
-		EnableMonitor: true, // 等同步到最新区块之后则开启 monitor
+		EnableMonitor: false, // 不用开启
 	}
 	return NewCrawler(cf)
 }
