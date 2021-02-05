@@ -365,8 +365,10 @@ func (idx *IncomeIndex) CreateCycleIncome(ctx context.Context, block *models.Blo
 		}
 		ic, ok := incomeMap[acc.RowId]
 		if !ok {
-			return fmt.Errorf("income: missing snapshot data for baker %s [%d] at snapshot %d[%d]",
+			err := fmt.Errorf("income: missing snapshot data for baker %s [%d] at snapshot %d[%d]",
 				v.Delegate, acc.RowId, sn.Cycle, sn.RollSnapshot)
+			log.Errorf("income error: %v", err)
+			return nil
 		}
 		ic.NBakingRights++
 		ic.ExpectedIncome += blockReward
