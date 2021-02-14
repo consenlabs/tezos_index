@@ -6,6 +6,7 @@ package puller
 import (
 	"encoding/json"
 	"github.com/go-redis/redis"
+	"github.com/zyjblockchain/sandy_log/log"
 	"tezos_index/chain"
 	. "tezos_index/puller/models"
 )
@@ -25,6 +26,9 @@ var (
 func dbLoadChainTip(db *redis.Client) (*ChainTip, error) {
 	tip := &ChainTip{}
 	val, err := db.Get(tipKey).Bytes()
+	if err != nil {
+		log.Errorf("get redis key: %s, error: %v", tipKey, err)
+	}
 	if err == redis.Nil {
 		return nil, ErrNoChainTip
 	} else if err != nil {
@@ -61,6 +65,9 @@ func dbStoreIndexTip(db *redis.Client, key string, tip *IndexTip) error {
 func dbLoadIndexTip(db *redis.Client, key string) (*IndexTip, error) {
 	tip := &IndexTip{}
 	val, err := db.Get(key).Bytes()
+	if err != nil {
+		log.Errorf("get redis key: %s, err: %v", key, err)
+	}
 	if err == redis.Nil {
 		return nil, ErrNoTable
 	} else if err != nil {
