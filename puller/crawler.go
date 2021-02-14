@@ -186,6 +186,7 @@ func (c *Crawler) Init(ctx context.Context, mode Mode) error {
 	c.tip, err = dbLoadChainTip(c.indexer.cachedb)
 	firstRun = err == ErrNoChainTip
 	if err != nil && !firstRun {
+		log.Errorf("err189: %v", err)
 		return err
 	}
 
