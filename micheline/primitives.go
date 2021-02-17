@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -159,7 +160,8 @@ func (p Prim) Text() string {
 	case PrimBytes:
 		return hex.EncodeToString(p.Bytes)
 	default:
-		return ""
+		v, _ := p.Value(p.OpCode).(string)
+		return v
 	}
 }
 
@@ -300,9 +302,9 @@ func (p Prim) Value(as OpCode) interface{} {
 	case PrimNullary, PrimNullaryAnno:
 		switch p.OpCode {
 		case D_FALSE:
-			return false
+			return strconv.FormatBool(false)
 		case D_TRUE:
-			return true
+			return strconv.FormatBool(true)
 		case D_NONE, D_UNIT:
 			return nil
 		default:
@@ -548,7 +550,8 @@ func (p *Prim) UnpackPrimitive(val map[string]interface{}) error {
 			}
 			oc, err := ParseOpCode(str)
 			if err != nil {
-				return err
+				log.Errorf("parse op code error: %v", err)
+				// return err // todo 不存在的op code 直接跳过
 			}
 			p.OpCode = oc
 			p.Type = PrimNullary
