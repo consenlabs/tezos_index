@@ -477,7 +477,8 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 		if !ok {
 			in, err = idx.loadIncome(ctx, block.Cycle, f.AccountId, tx)
 			if err != nil {
-				return fmt.Errorf("income: unknown baker %d", f.AccountId)
+				// return fmt.Errorf("income: unknown baker %d", f.AccountId) // todo
+				continue
 			}
 			incomeMap[in.AccountId] = in
 		}
