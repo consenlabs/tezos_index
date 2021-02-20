@@ -102,14 +102,16 @@ func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, buil
 		success, err := idx.closeVote(ctx, block, builder, tx)
 		if err != nil {
 			log.Errorf("Close %s vote at block %d: %v", block.VotingPeriodKind, block.Height, err)
-			return err
+			// return err // todo
+			return nil
 		}
 
 		// on failure or on end, close last election
 		if !success || block.VotingPeriodKind == chain.VotingPeriodProposal {
 			if err := idx.closeElection(ctx, block, builder, tx); err != nil {
 				log.Errorf("Close election at block %d: %v", block.Height, err)
-				return err
+				// return err // todo
+				return nil
 			}
 		}
 	}
