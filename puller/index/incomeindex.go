@@ -67,12 +67,14 @@ func (idx *IncomeIndex) ConnectBlock(ctx context.Context, block *models.Block, b
 
 	// update income from flows and rights
 	if err := idx.UpdateBlockIncome(ctx, block, builder, false, tx); err != nil {
-		return err
+		log.Errorf("UpdateBlockIncome err: %v", err)
+		// return err todo
 	}
 
 	// update burn from nonce revelations, if any
 	if err := idx.UpdateNonceRevelations(ctx, block, builder, false, tx); err != nil {
-		return err
+		log.Errorf("UpdateNonceRevelations err: %v", err)
+		// return err todo
 	}
 
 	// skip when no new rights are defined
@@ -477,8 +479,7 @@ func (idx *IncomeIndex) UpdateBlockIncome(ctx context.Context, block *models.Blo
 		if !ok {
 			in, err = idx.loadIncome(ctx, block.Cycle, f.AccountId, tx)
 			if err != nil {
-				// return fmt.Errorf("income: unknown baker %d", f.AccountId) // todo
-				continue
+				return fmt.Errorf("income: unknown baker %d", f.AccountId)
 			}
 			incomeMap[in.AccountId] = in
 		}
