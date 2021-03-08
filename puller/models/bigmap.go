@@ -19,26 +19,26 @@ var bigmapPool = &sync.Pool{
 
 type BigMapItem struct {
 	DeletedAt   *time.Time                 `sql:"index"`
-	RowId       uint64                     `gorm:"primary_key;column:row_id"   json:"row_id"`    // internal: id
-	PrevId      uint64                     `gorm:"column:prev_id"      json:"prev_id"`           // row_id of previous value that's updated
-	AccountId   AccountID                  `gorm:"column:account_id"      json:"account_id"`     // account table entry for contract
-	ContractId  uint64                     `gorm:"column:contract_id"      json:"contract_id"`   // contract table entry
-	OpId        OpID                       `gorm:"column:op_id"      json:"op_id"`               // operation id that created/updated/deleted the entry
-	Height      int64                      `gorm:"column:height"      json:"height"`             // creation/update/deletion time
-	Timestamp   time.Time                  `gorm:"column:time"      json:"time"`                 // creation/update/deletion height
-	BigMapId    int64                      `gorm:"column:bigmap_id"      json:"bigmap_id"`       // id of the bigmap
-	Action      micheline.BigMapDiffAction `gorm:"column:action"      json:"action"`             // action
-	KeyHash     []byte                     `gorm:"column:key_hash"             json:"key_hash"`  // not compressedn because random
-	KeyEncoding micheline.PrimType         `gorm:"column:key_encoding"      json:"key_encoding"` // type of the key encoding
-	KeyType     micheline.OpCode           `gorm:"column:key_type"      json:"key_type"`         // type of the key encoding
-	Key         []byte                     `gorm:"column:key;type:BLOB"      json:"key"`         // key bytes: int: big.Int, string or []byte
-	Value       []byte                     `gorm:"column:value;type:BLOB"      json:"value"`     // value bytes: binary encoded micheline.Prim
-	IsReplaced  bool                       `gorm:"column:is_replaced"     json:"is_replaced"`    // flag to indicate this entry has been replaced by a newer entry
-	IsDeleted   bool                       `gorm:"column:is_deleted"      json:"is_deleted"`     // flag to indicate this key has been deleted
-	IsCopied    bool                       `gorm:"column:is_copied"      json:"is_copied"`       // flag to indicate this key has been copied
-	Counter     int64                      `gorm:"column:counter"      json:"-"`                 // running update counter
-	NKeys       int64                      `gorm:"column:n_keys"      json:"-"`                  // current number of active keys
-	Updated     int64                      `gorm:"column:updated"      json:"-"`                 // height at which this entry was replaced
+	RowId       uint64                     `gorm:"primary_key;column:row_id"   json:"row_id"`               // internal: id
+	PrevId      uint64                     `gorm:"column:prev_id"      json:"prev_id"`                      // row_id of previous value that's updated
+	AccountId   AccountID                  `gorm:"column:account_id"      json:"account_id"`                // account table entry for contract
+	ContractId  uint64                     `gorm:"column:contract_id"      json:"contract_id"`              // contract table entry
+	OpId        OpID                       `gorm:"column:op_id"      json:"op_id"`                          // operation id that created/updated/deleted the entry
+	Height      int64                      `gorm:"column:height"      json:"height"`                        // creation/update/deletion time
+	Timestamp   time.Time                  `gorm:"column:time"      json:"time"`                            // creation/update/deletion height
+	BigMapId    int64                      `gorm:"column:bigmap_id;index:idx01"      json:"bigmap_id"`      // id of the bigmap
+	Action      micheline.BigMapDiffAction `gorm:"column:action;index:idx02"      json:"action"`            // action
+	KeyHash     []byte                     `gorm:"column:key_hash;index:idx03"             json:"key_hash"` // not compressedn because random
+	KeyEncoding micheline.PrimType         `gorm:"column:key_encoding"      json:"key_encoding"`            // type of the key encoding
+	KeyType     micheline.OpCode           `gorm:"column:key_type"      json:"key_type"`                    // type of the key encoding
+	Key         []byte                     `gorm:"column:key;type:BLOB"      json:"key"`                    // key bytes: int: big.Int, string or []byte
+	Value       []byte                     `gorm:"column:value;type:BLOB"      json:"value"`                // value bytes: binary encoded micheline.Prim
+	IsReplaced  bool                       `gorm:"column:is_replaced;index:idx04"     json:"is_replaced"`   // flag to indicate this entry has been replaced by a newer entry
+	IsDeleted   bool                       `gorm:"column:is_deleted"      json:"is_deleted"`                // flag to indicate this key has been deleted
+	IsCopied    bool                       `gorm:"column:is_copied"      json:"is_copied"`                  // flag to indicate this key has been copied
+	Counter     int64                      `gorm:"column:counter"      json:"-"`                            // running update counter
+	NKeys       int64                      `gorm:"column:n_keys"      json:"-"`                             // current number of active keys
+	Updated     int64                      `gorm:"column:updated"      json:"-"`                            // height at which this entry was replaced
 }
 
 func UpdatesBigMapItem(upBigMap *BigMapItem, db *gorm.DB) error {

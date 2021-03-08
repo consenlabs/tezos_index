@@ -146,7 +146,7 @@ func (e *Environment) NewPuller() *Crawler {
 		DB:            e.Engine,
 		Indexer:       indexer,
 		Client:        e.Client,
-		Queue:         4,
+		Queue:         20,
 		StopBlock:     0,
 		EnableMonitor: false, // 不用开启
 	}
