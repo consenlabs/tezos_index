@@ -93,7 +93,8 @@ func (idx *GovIndex) ConnectBlock(ctx context.Context, block *models.Block, buil
 		err = idx.processBallots(ctx, block, builder, tx)
 	}
 	if err != nil {
-		return err
+		// return err // todo
+		return nil
 	}
 
 	// close any previous period after last block
