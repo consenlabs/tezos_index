@@ -138,7 +138,7 @@ func (e *Environment) NewPuller() *Crawler {
 			index.NewSnapshotIndex(e.Engine), // 需要脏读 account
 			index.NewIncomeIndex(e.Engine),
 			index.NewGovIndex(e.Engine),
-			index.NewBigMapIndex(e.Engine), // 需要脏读contract
+			// index.NewBigMapIndex(e.Engine), // 需要脏读contract
 		},
 	})
 
