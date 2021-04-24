@@ -628,16 +628,17 @@ func (b *Builder) NewTransactionOp(ctx context.Context, oh *rpc.OperationHeader,
 			return fmt.Errorf("transaction op [%d:%d]: marshal storage: %v", op_n, op_c, err)
 		}
 	}
-	if len(res.BigMapDiff) > 0 {
-		top.Metadata.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, nil)
-		if err != nil {
-			return fmt.Errorf("transaction op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
-		}
-		op.BigMapDiff, err = top.Metadata.Result.BigMapDiff.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf("transaction op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
-		}
-	}
+	// todo 屏蔽 bigMap
+	// if len(res.BigMapDiff) > 0 {
+	// 	top.Metadata.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, nil)
+	// 	if err != nil {
+	// 		return fmt.Errorf("transaction op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
+	// 	}
+	// 	op.BigMapDiff, err = top.Metadata.Result.BigMapDiff.MarshalBinary()
+	// 	if err != nil {
+	// 		return fmt.Errorf("transaction op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
+	// 	}
+	// }
 
 	var flows []*Flow
 
@@ -838,16 +839,17 @@ func (b *Builder) NewInternalTransactionOp(ctx context.Context, origsrc, origdlg
 			return fmt.Errorf("internal transaction op [%d:%d]: marshal storage: %v", op_n, op_c, err)
 		}
 	}
-	if len(res.BigMapDiff) > 0 {
-		iop.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, nil)
-		if err != nil {
-			return fmt.Errorf("internal transaction op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
-		}
-		op.BigMapDiff, err = iop.Result.BigMapDiff.MarshalBinary()
-		if err != nil {
-			return fmt.Errorf("internal transaction op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
-		}
-	}
+	// todo 屏蔽 bigMap
+	// if len(res.BigMapDiff) > 0 {
+	// 	iop.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, nil)
+	// 	if err != nil {
+	// 		return fmt.Errorf("internal transaction op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
+	// 	}
+	// 	op.BigMapDiff, err = iop.Result.BigMapDiff.MarshalBinary()
+	// 	if err != nil {
+	// 		return fmt.Errorf("internal transaction op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
+	// 	}
+	// }
 
 	var flows []*Flow
 
@@ -1068,17 +1070,18 @@ func (b *Builder) NewOriginationOp(ctx context.Context, oh *rpc.OperationHeader,
 		}
 
 		// create or extend bigmap diff to inject alloc for proto < v005
-		oop.Metadata.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, oop.Script)
-		if err != nil {
-			return fmt.Errorf("origination op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
-		}
-		if len(oop.Metadata.Result.BigMapDiff) > 0 {
-			op.BigMapDiff, err = oop.Metadata.Result.BigMapDiff.MarshalBinary()
-			if err != nil {
-				return fmt.Errorf("origination op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
-			}
-			op.HasData = true
-		}
+		// todo 屏蔽bigMap
+		// oop.Metadata.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, oop.Script)
+		// if err != nil {
+		// 	return fmt.Errorf("origination op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
+		// }
+		// if len(oop.Metadata.Result.BigMapDiff) > 0 {
+		// 	op.BigMapDiff, err = oop.Metadata.Result.BigMapDiff.MarshalBinary()
+		// 	if err != nil {
+		// 		return fmt.Errorf("origination op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
+		// 	}
+		// 	op.HasData = true
+		// }
 
 	} else {
 		// handle errors
@@ -1264,17 +1267,18 @@ func (b *Builder) NewInternalOriginationOp(ctx context.Context, origsrc, origdlg
 		}
 
 		// create or extend bigmap diff to inject alloc for proto < v005
-		iop.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, iop.Script)
-		if err != nil {
-			return fmt.Errorf("internal origination op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
-		}
-		if len(iop.Result.BigMapDiff) > 0 {
-			op.BigMapDiff, err = iop.Result.BigMapDiff.MarshalBinary()
-			if err != nil {
-				return fmt.Errorf("internal origination op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
-			}
-			op.HasData = true
-		}
+		// todo 屏蔽 bigMap
+		// iop.Result.BigMapDiff, err = b.PatchBigMapDiff(ctx, res.BigMapDiff, op.ReceiverId, iop.Script)
+		// if err != nil {
+		// 	return fmt.Errorf("internal origination op [%d:%d]: patch bigmap: %v", op_n, op_c, err)
+		// }
+		// if len(iop.Result.BigMapDiff) > 0 {
+		// 	op.BigMapDiff, err = iop.Result.BigMapDiff.MarshalBinary()
+		// 	if err != nil {
+		// 		return fmt.Errorf("internal origination op [%d:%d]: marshal bigmap: %v", op_n, op_c, err)
+		// 	}
+		// 	op.HasData = true
+		// }
 
 	} else {
 		// handle errors
