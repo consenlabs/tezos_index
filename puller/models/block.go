@@ -185,11 +185,11 @@ func NewBlock(tz *Bundle, parent *Block) (*Block, error) {
 	}
 
 	// init block model from rpc block and local data (expecing defaults for unset fields)
-	b.Height = tz.Block.Header.Level
-	b.Cycle = tz.Block.Metadata.Level.Cycle
-	b.Timestamp = tz.Block.Header.Timestamp
+	b.Height = tz.Block.GetLevel()
+	b.Cycle = tz.Block.GetCycle()
+	b.Timestamp = tz.Block.GetTimestamp()
 	b.Hash = chain.StrBHash(tz.Block.Hash.String())
-	b.Version = tz.Block.Header.Proto
+	b.Version = tz.Block.GetVersion()
 	b.Validation = tz.Block.Header.ValidationPass
 	b.Priority = tz.Block.Header.Priority
 	if len(tz.Block.Header.ProofOfWorkNonce) >= 8 {
@@ -202,7 +202,7 @@ func NewBlock(tz *Bundle, parent *Block) (*Block, error) {
 	}
 
 	// be robust against missing voting period (like on block 0 and 1)
-	b.VotingPeriodKind = tz.Block.Metadata.VotingPeriodKind
+	b.VotingPeriodKind = tz.Block.GetVotingPeriodKind()
 	if !b.VotingPeriodKind.IsValid() {
 		if parent != nil {
 			b.VotingPeriodKind = parent.VotingPeriodKind
@@ -369,7 +369,7 @@ func (b *Block) Free() {
 func (b *Block) Reset() {
 	b.RowId = 0
 	b.ParentId = 0
-	b.Hash = chain.StrBHash(chain.ZeroHash.String())
+	b.Hash = chain.StrBHash("")
 	b.IsOrphan = false
 	b.Height = 0
 	b.Cycle = 0

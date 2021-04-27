@@ -18,8 +18,12 @@ var (
 	// starts with an unknown identifier.
 	ErrUnknownHashType = errors.New("unknown hash type")
 
-	// ZeroHash represents an empty invalid hash type
-	ZeroHash = Hash{Type: HashTypeInvalid, Hash: nil}
+	// InvalidHash represents an empty invalid hash type
+	InvalidHash = Hash{Type: HashTypeInvalid, Hash: nil}
+
+	// ZeroHash
+	ZeroOpHash    = NewOperationHash(make([]byte, HashTypeOperation.Len()))
+	ZeroBlockHash = NewBlockHash(make([]byte, HashTypeBlock.Len()))
 )
 
 type HashType int
@@ -39,6 +43,7 @@ const (
 	HashTypeOperationListList
 	HashTypeProtocol
 	HashTypeContext
+	HashTypeNonce
 	HashTypeSeedEd25519
 	HashTypePkEd25519
 	HashTypeSkEd25519
@@ -810,6 +815,75 @@ func ParseExprHash(s string) (ExprHash, error) {
 	return h, nil
 }
 
+// NonceHash
+type NonceHash struct {
+	Hash
+}
+
+func NewNonceHash(buf []byte) NonceHash {
+	b := make([]byte, len(buf))
+	copy(b, buf)
+	return NonceHash{Hash: NewHash(HashTypeNonce, b)}
+}
+
+func (h NonceHash) Clone() NonceHash {
+	return NonceHash{h.Hash.Clone()}
+}
+
+func (h NonceHash) IsEqual(h2 NonceHash) bool {
+	return h.Hash.IsEqual(h2.Hash)
+}
+
+func (h *NonceHash) UnmarshalText(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	if !strings.HasPrefix(string(data), NONCE_HASH_PREFIX) {
+		return fmt.Errorf("invalid prefix for nonce hash '%s'", string(data))
+	}
+	if err := h.Hash.UnmarshalText(data); err != nil {
+		return err
+	}
+	if h.Type != HashTypeNonce {
+		return fmt.Errorf("invalid type %s for nonce hash '%s'", h.Type.Prefix(), string(data))
+	}
+	if len(h.Hash.Hash) != h.Type.Len() {
+		return fmt.Errorf("invalid len %d for nonce hash '%s'", len(h.Hash.Hash), string(data))
+	}
+	return nil
+}
+
+func (h *NonceHash) UnmarshalBinary(data []byte) error {
+	if l := len(data); l > 0 && l != HashTypeNonce.Len() {
+		return fmt.Errorf("invalid len %d for nonce hash '%s'", len(data), string(data))
+	}
+	h.Type = HashTypeNonce
+	h.Hash.Hash = make([]byte, HashTypeNonce.Len())
+	copy(h.Hash.Hash, data)
+	return nil
+}
+
+func ParseNonceHash(s string) (NonceHash, error) {
+	var h NonceHash
+	if err := h.UnmarshalText([]byte(s)); err != nil {
+		return h, err
+	}
+	return h, nil
+}
+
+func MustParseNonceHash(s string) NonceHash {
+	b, err := ParseNonceHash(s)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+func ParseNonceHashSafe(s string) NonceHash {
+	var h NonceHash
+	h.UnmarshalText([]byte(s))
+	return h
+}
 func decodeHash(hstr string) (Hash, error) {
 	typ := ParseHashType(hstr)
 	if typ == HashTypeInvalid {

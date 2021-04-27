@@ -104,7 +104,7 @@ func (o *Op) Reset() {
 	o.Timestamp = time.Time{}
 	o.Height = 0
 	o.Cycle = 0
-	o.Hash = chain.StrOpHash(chain.ZeroHash.String())
+	o.Hash = chain.StrOpHash("")
 	o.OpN = 0
 	o.OpC = 0
 	o.OpI = 0
