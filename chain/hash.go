@@ -108,6 +108,8 @@ func ParseHashType(s string) HashType {
 			return HashTypeOperationListList
 		case strings.HasPrefix(s, SECP256K1_SCALAR_PREFIX):
 			return HashTypeScalarSecp256k1
+		case strings.HasPrefix(s, NONCE_HASH_PREFIX):
+			return HashTypeNonce
 		}
 	case 54:
 		switch true {
@@ -202,6 +204,8 @@ func (t HashType) Prefix() string {
 		return PROTOCOL_HASH_PREFIX
 	case HashTypeContext:
 		return CONTEXT_HASH_PREFIX
+	case HashTypeNonce:
+		return NONCE_HASH_PREFIX
 	case HashTypeSeedEd25519:
 		return ED25519_SEED_PREFIX
 	case HashTypePkEd25519:
@@ -269,6 +273,8 @@ func (t HashType) PrefixBytes() []byte {
 		return PROTOCOL_HASH_ID
 	case HashTypeContext:
 		return CONTEXT_HASH_ID
+	case HashTypeNonce:
+		return NONCE_HASH_ID
 	case HashTypeSeedEd25519:
 		return ED25519_SEED_ID
 	case HashTypePkEd25519:
@@ -314,61 +320,39 @@ func (t HashType) Len() int {
 		return 4
 	case HashTypeId:
 		return 16
-	case HashTypePkhEd25519:
+	case HashTypePkhEd25519,
+		HashTypePkhSecp256k1,
+		HashTypePkhP256,
+		HashTypePkhNocurve,
+		HashTypePkhBlinded:
 		return 20
-	case HashTypePkhSecp256k1:
-		return 20
-	case HashTypePkhP256:
-		return 20
-	case HashTypePkhNocurve:
-		return 20
-	case HashTypePkhBlinded:
-		return 20
-	case HashTypeBlock:
+	case HashTypeBlock,
+		HashTypeOperation,
+		HashTypeOperationList,
+		HashTypeOperationListList,
+		HashTypeProtocol,
+		HashTypeContext,
+		HashTypeNonce,
+		HashTypeSeedEd25519,
+		HashTypePkEd25519,
+		HashTypeSkSecp256k1,
+		HashTypeSkP256,
+		HashTypeScriptExpr:
 		return 32
-	case HashTypeOperation:
-		return 32
-	case HashTypeOperationList:
-		return 32
-	case HashTypeOperationListList:
-		return 32
-	case HashTypeProtocol:
-		return 32
-	case HashTypeContext:
-		return 32
-	case HashTypeSeedEd25519:
-		return 32
-	case HashTypePkEd25519:
-		return 32
-	case HashTypeSkEd25519:
-		return 64
-	case HashTypePkSecp256k1:
+	case HashTypePkSecp256k1,
+		HashTypePkP256,
+		HashTypeScalarSecp256k1,
+		HashTypeElementSecp256k1:
 		return 33
-	case HashTypeSkSecp256k1:
-		return 32
-	case HashTypePkP256:
-		return 33
-	case HashTypeSkP256:
-		return 32
-	case HashTypeScalarSecp256k1:
-		return 33
-	case HashTypeElementSecp256k1:
-		return 33
-	case HashTypeScriptExpr:
-		return 32
-	case HashTypeEncryptedSeedEd25519:
+	case HashTypeEncryptedSeedEd25519,
+		HashTypeEncryptedSkSecp256k1,
+		HashTypeEncryptedSkP256:
 		return 56
-	case HashTypeEncryptedSkSecp256k1:
-		return 56
-	case HashTypeEncryptedSkP256:
-		return 56
-	case HashTypeSigEd25519:
-		return 64
-	case HashTypeSigSecp256k1:
-		return 64
-	case HashTypeSigP256:
-		return 64
-	case HashTypeSigGeneric:
+	case HashTypeSkEd25519,
+		HashTypeSigEd25519,
+		HashTypeSigSecp256k1,
+		HashTypeSigP256,
+		HashTypeSigGeneric:
 		return 64
 	default:
 		return 0
@@ -379,66 +363,66 @@ func (t HashType) Base58Len() int {
 	switch t {
 	case HashTypeChainId:
 		return 15
-	case HashTypeId:
-		return 30
-	case HashTypePkhEd25519:
-		return 36
-	case HashTypePkhSecp256k1:
-		return 36
-	case HashTypePkhP256:
-		return 36
-	case HashTypePkhNocurve:
+	case HashTypeId,
+		HashTypePkhEd25519,
+		HashTypePkhSecp256k1,
+		HashTypePkhP256,
+		HashTypePkhNocurve:
 		return 36
 	case HashTypePkhBlinded:
 		return 37
-	case HashTypeBlock:
+	case HashTypeBlock,
+		HashTypeOperation,
+		HashTypeProtocol:
 		return 51
-	case HashTypeOperation:
-		return 51
-	case HashTypeOperationList:
+	case HashTypeOperationList,
+		HashTypeContext:
 		return 52
-	case HashTypeOperationListList:
+	case HashTypeOperationListList,
+		HashTypeNonce,
+		HashTypeScalarSecp256k1:
 		return 53
-	case HashTypeProtocol:
-		return 51
-	case HashTypeContext:
-		return 52
-	case HashTypeSeedEd25519:
+	case HashTypeSeedEd25519,
+		HashTypePkEd25519,
+		HashTypeSkSecp256k1,
+		HashTypeSkP256,
+		HashTypeElementSecp256k1,
+		HashTypeScriptExpr:
 		return 54
-	case HashTypePkEd25519:
-		return 54
-	case HashTypeSkEd25519:
-		return 98
-	case HashTypePkSecp256k1:
+	case HashTypePkSecp256k1,
+		HashTypePkP256:
 		return 55
-	case HashTypeSkSecp256k1:
-		return 54
-	case HashTypePkP256:
-		return 55
-	case HashTypeSkP256:
-		return 54
-	case HashTypeScalarSecp256k1:
-		return 53
-	case HashTypeElementSecp256k1:
-		return 54
-	case HashTypeScriptExpr:
-		return 54
-	case HashTypeEncryptedSeedEd25519:
+	case HashTypeEncryptedSeedEd25519,
+		HashTypeEncryptedSkSecp256k1,
+		HashTypeEncryptedSkP256:
 		return 88
-	case HashTypeEncryptedSkSecp256k1:
-		return 88
-	case HashTypeEncryptedSkP256:
-		return 88
-	case HashTypeSigEd25519:
-		return 99
-	case HashTypeSigSecp256k1:
-		return 99
-	case HashTypeSigP256:
-		return 98
 	case HashTypeSigGeneric:
 		return 96
+	case HashTypeSkEd25519,
+		HashTypeSigP256:
+		return 98
+	case HashTypeSigEd25519,
+		HashTypeSigSecp256k1:
+		return 99
 	default:
 		return 0
+	}
+}
+
+// DEPRECATED, will migrate to new key handling in v8.1
+func (t HashType) KeyType() KeyType {
+	switch t {
+	case HashTypePkhEd25519, // technically incorrect, bug in v7/packdb
+		HashTypePkEd25519: // correct
+		return KeyTypeEd25519
+	case HashTypePkhSecp256k1, // technically incorrect, bug in v7/packdb
+		HashTypePkSecp256k1: // correct
+		return KeyTypeSecp256k1
+	case HashTypePkhP256, // technically incorrect, bug in v7/packdb
+		HashTypePkP256: // correct
+		return KeyTypeP256
+	default:
+		return KeyTypeInvalid
 	}
 }
 
@@ -884,6 +868,7 @@ func ParseNonceHashSafe(s string) NonceHash {
 	h.UnmarshalText([]byte(s))
 	return h
 }
+
 func decodeHash(hstr string) (Hash, error) {
 	typ := ParseHashType(hstr)
 	if typ == HashTypeInvalid {
@@ -899,8 +884,8 @@ func decodeHash(hstr string) (Hash, error) {
 	if bytes.Compare(version, typ.PrefixBytes()) != 0 {
 		return Hash{}, fmt.Errorf("invalid prefix '%x' for decoded hash type '%s'", version, typ)
 	}
-	if len(decoded) != typ.Len() {
-		return Hash{}, fmt.Errorf("invalid length for decoded hash ")
+	if have, want := len(decoded), typ.Len(); have != want {
+		return Hash{}, fmt.Errorf("invalid length for decoded hash have=%d want=%d", have, want)
 	}
 	return Hash{
 		Type: typ,
@@ -912,8 +897,8 @@ func encodeHash(typ HashType, h []byte) (string, error) {
 	if typ == HashTypeInvalid {
 		return "", ErrUnknownHashType
 	}
-	if len(h) != typ.Len() {
-		return "", fmt.Errorf("invalid hash length")
+	if have, want := len(h), typ.Len(); have != want {
+		return "", fmt.Errorf("invalid hash length have=%d want=%d", have, want)
 	}
 	return base58.CheckEncode(h, typ.PrefixBytes()), nil
 }
