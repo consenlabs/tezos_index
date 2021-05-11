@@ -1014,7 +1014,8 @@ func (b *Builder) UpdateStats(ctx context.Context) error {
 				f.Category, f.Operation, f.AccountId)
 		}
 		if err := acc.UpdateBalance(f); err != nil {
-			return err
+			// todo 屏蔽这个函数返回的错误
+			// return err
 		}
 	}
 
@@ -1030,7 +1031,8 @@ func (b *Builder) UpdateStats(ctx context.Context) error {
 				f.Category, f.Operation, f.AccountId)
 		}
 		if err := acc.UpdateBalance(f); err != nil {
-			return err
+			// todo 屏蔽这个函数返回的错误
+			// return err
 		}
 	}
 
