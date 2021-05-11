@@ -5,6 +5,7 @@
 package rpc
 
 import (
+	"encoding/json"
 	"tezos_index/chain"
 )
 
@@ -20,4 +21,11 @@ type EndorsementOpMetadata struct {
 	BalanceUpdates BalanceUpdates `json:"balance_updates"`
 	Delegate       chain.Address  `json:"delegate"`
 	Slots          []int          `json:"slots"`
+}
+
+type EndorsementWithSlotOp struct {
+	GenericOp
+	Endorsement json.RawMessage        `json:"endorsement"`
+	Slot        int                    `json:"slot"`
+	Metadata    *EndorsementOpMetadata `json:"metadata"`
 }

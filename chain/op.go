@@ -87,6 +87,7 @@ const (
 	OpTypeInvoice                                 // 13
 	OpTypeAirdrop                                 // 14
 	OpTypeSeedSlash                               // 15
+	OpTypeEndorsementWithSlot                     // 16
 	OpTypeInvalid                   = 255
 )
 
@@ -141,6 +142,8 @@ func ParseOpType(s string) OpType {
 		return OpTypeAirdrop
 	case "seed_slash":
 		return OpTypeSeedSlash
+	case "endorsement_with_slot":
+		return OpTypeEndorsementWithSlot
 	default:
 		return OpTypeInvalid
 	}
@@ -180,6 +183,8 @@ func (t OpType) String() string {
 		return "airdrop"
 	case OpTypeSeedSlash:
 		return "seed_slash"
+	case OpTypeEndorsementWithSlot:
+		return "endorsement_with_slot"
 	default:
 		return ""
 	}

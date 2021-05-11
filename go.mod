@@ -21,5 +21,6 @@ require (
 	github.com/zyjblockchain/sandy_log v1.0.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	gopkg.in/bson.v2 v2.0.0-20171018101713-d8c8987b8862 // indirect
+	gopkg.in/h2non/gentleman.v2 v2.0.5
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 )

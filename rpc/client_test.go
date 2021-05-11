@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/h2non/gentleman.v2"
 	"net/http"
 	"net/url"
 	"testing"
@@ -54,5 +55,22 @@ func TestClient_GetBlockHeight(t *testing.T) {
 		t.Log(*v)
 	}
 	t.Log(block.Header.Content.Parameters.Supply())
+
+}
+
+func TestGetBlockSandyTest(t *testing.T) {
+	cli := gentleman.New()
+	cli.URL("https://tezos-mainnet.token.im")
+	cli.AddHeader("X-DEVICE-TOKEN", "test123")
+	req := cli.Request()
+	req.AddPath("/chains/main/blocks/1466368")
+
+	bb := Block{}
+	resp, err := req.Send()
+	assert.NoError(t, err)
+	// t.Log(resp)
+	err = resp.JSON(&bb)
+	assert.NoError(t, err)
+	t.Log(bb)
 
 }

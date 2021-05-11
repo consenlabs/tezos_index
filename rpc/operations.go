@@ -96,6 +96,8 @@ opLoop:
 			(*e)[i] = &ProposalsOp{}
 		case chain.OpTypeBallot:
 			(*e)[i] = &BallotOp{}
+		case chain.OpTypeEndorsementWithSlot:
+			(*e)[i] = &EndorsementWithSlotOp{}
 		// dictator operations
 		// case "activate":
 		// case "activate_testnet":
